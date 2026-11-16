@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Kauaʻi Bus — Routes & Schedules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root {
+    --ocean:    #006B8F;
+    --teal:     #00A8B5;
+    --hibiscus: #D94F3D;
+    --leaf:     #3A7D44;
+    --night:    #131313;
+    --ink:      #131313;
+    --mist:     #F5F5F5;
+    --text:     #595959;
+    --subtle:   #7A7A7A;
+    --border:   #E5E5E5;
+    --yellow:   #FFE24A;
+    --yellow-dk:#131313;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Instrument Sans', sans-serif; background: #ffffff; color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  header {
+    background: #ffffff;
+    color: var(--ink);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    position: sticky; top: 0; z-index: 200;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  }
+  .header-brand { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 0; }
+  .kc-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+  .kc-logo-icon { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #1a6b3a 0%, #0a4a6e 50%, #e8a020 100%); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; overflow: hidden; }
+  .kc-logo-text { font-size: 1.05rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1; }
+  .header-divider { width: 1px; height: 28px; background: var(--border); margin: 0 0.4rem; }
+  .bus-label { display: flex; flex-direction: column; }
+  .bus-label strong { font-size: 0.9rem; font-weight: 700; color: var(--ink); line-height: 1.15; }
+  .bus-label span { font-size: 0.62rem; font-weight: 500; color: var(--subtle); letter-spacing: 0.08em; text-transform: uppercase; }
+  .header-right { display: flex; gap: 1rem; align-items: center; font-size: 0.78rem; color: var(--subtle); }
+  .header-right a { color: var(--ocean); text-decoration: none; font-weight: 600; }
+  .header-right a:hover { color: var(--teal); }
+  .no-sun { background: var(--yellow); color: var(--yellow-dk); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.18rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--ink) 0%, #0a2a3a 100%);
+    color: white; padding: 2.25rem 2rem;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23FFE24A' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .hero-inner { max-width: 860px; position: relative; }
+  .hero h2 { font-family: 'Instrument Sans', sans-serif; font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 700; line-height: 1.1; margin-bottom: 0.6rem; letter-spacing: -0.02em; }
+  .hero p { font-size: 0.9rem; color: rgba(255,255,255,0.7); max-width: 500px; line-height: 1.6; }
+  .fare-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1.25rem; }
+  .fare-pill { background: rgba(255,226,74,0.12); border: 1px solid rgba(255,226,74,0.25); color: white; padding: 0.3rem 0.75rem; border-radius: 100px; font-size: 0.77rem; font-weight: 500; }
+  .fare-pill strong { color: var(--yellow); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 2rem;
+    display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;
+    position: sticky; top: 62px; z-index: 190;
+  }
+  .filter-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--subtle); font-weight: 700; margin-right: 0.2rem; }
+  .filter-btn { background: var(--mist); border: 1.5px solid transparent; color: var(--ink); padding: 0.3rem 0.8rem; border-radius: 100px; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: 'Instrument Sans', sans-serif; }
+  .filter-btn:hover { border-color: var(--yellow); color: var(--ink); }
+  .filter-btn.active { background: var(--yellow); color: var(--yellow-dk); border-color: var(--yellow); font-weight: 700; }
+
+  /* ── MAIN ── */
+  .main { max-width: 980px; margin: 0 auto; padding: 1.75rem 1.5rem 4rem; }
+
+  .section-label { font-family: 'Instrument Sans', sans-serif; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--subtle); font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── ROUTE PANELS ── */
+  .route-panel {
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    animation: fadeUp 0.3s ease both;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .route-panel.hidden { display: none; }
+
+  .panel-header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .panel-header:hover { background: var(--mist); }
+
+  .route-badge {
+    width: 52px; height: 52px; border-radius: 11px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Instrument Sans', sans-serif; font-weight: 700; color: white; flex-shrink: 0;
+    line-height: 1.1;
+  }
+  .badge-num { font-size: 1rem; letter-spacing: -0.02em; }
+  .badge-sub { font-size: 0.58rem; font-weight: 500; opacity: 0.85; }
+
+  .panel-title { flex: 1; }
+  .panel-title h3 { font-family: 'Instrument Sans', sans-serif; font-size: 1rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
+  .panel-title .route-sub { font-size: 0.73rem; font-weight: 500; margin-top: 0.15rem; }
+
+  .panel-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+  .tag { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.07em; padding: 0.18rem 0.5rem; border-radius: 5px; text-transform: uppercase; white-space: nowrap; }
+  .tag-green { background: #EDF7EE; color: var(--leaf); }
+  .tag-orange { background: #FEF3E2; color: #B45309; }
+  .tag-blue { background: #E8F4F7; color: var(--ocean); }
+  .tag-red { background: #FEE2E2; color: #B91C1C; }
+
+  .chevron { color: var(--subtle); font-size: 0.9rem; transition: transform 0.2s; margin-left: 0.5rem; }
+  .panel-header.open .chevron { transform: rotate(180deg); }
+
+  /* ── PANEL BODY ── */
+  .panel-body { display: none; border-top: 1px solid var(--border); }
+  .panel-body.open { display: block; }
+
+  /* key stops strip */
+  .stops-strip {
+    padding: 0.75rem 1.25rem;
+    background: var(--mist);
+    display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;
+    font-size: 0.78rem; color: var(--subtle); border-bottom: 1px solid var(--border);
+  }
+  .stop-em { font-weight: 600; color: var(--ink); }
+  .stop-arrow { color: var(--ocean); font-size: 0.7rem; }
+
+  /* schedule table */
+  .schedule-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 400px; }
+  thead th {
+    background: var(--night); color: white;
+    padding: 0.6rem 0.75rem; text-align: left;
+    font-family: 'Instrument Sans', sans-serif; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  }
+  thead th:first-child { min-width: 180px; }
+  thead th:not(:first-child) { text-align: center; min-width: 58px; }
+  tbody tr:nth-child(even) { background: var(--mist); }
+  tbody td { padding: 0.5rem 0.75rem; color: var(--ink); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody td:first-child { font-weight: 500; color: var(--text); }
+  tbody td:not(:first-child) { text-align: center; color: var(--subtle); font-variant-numeric: tabular-nums; font-size: 0.76rem; }
+  .highlight-stop td:first-child { color: var(--ocean); font-weight: 700; }
+  .note-row td { font-size: 0.7rem; color: var(--subtle); font-style: italic; background: #fffef0; }
+
+  .panel-footer {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--mist);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+  }
+  .panel-footer .note { font-size: 0.75rem; color: var(--subtle); }
+  .pdf-link { font-size: 0.75rem; font-weight: 600; color: var(--ocean); text-decoration: none; background: var(--yellow); padding: 0.25rem 0.7rem; border-radius: 100px; color: var(--yellow-dk); }
+  .pdf-link:hover { opacity: 0.85; }
+
+  /* ── INFO GRID ── */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .info-card { background: white; border-radius: 14px; border: 1.5px solid var(--border); padding: 1.1rem; }
+  .info-icon { font-size: 1.3rem; margin-bottom: 0.5rem; display: block; }
+  .info-card h4 { font-family: 'Instrument Sans', sans-serif; font-size: 0.88rem; font-weight: 700; margin-bottom: 0.45rem; color: var(--ink); }
+  .info-card ul { list-style: none; }
+  .info-card li { font-size: 0.8rem; color: var(--subtle); padding: 0.2rem 0; display: flex; gap: 0.4rem; }
+  .info-card li::before { content: '·'; color: var(--ocean); font-weight: 900; flex-shrink: 0; }
+
+  /* ── FOOTER ── */
+  .site-footer { background: var(--night); color: rgba(255,255,255,0.45); text-align: center; padding: 1.5rem; font-size: 0.75rem; }
+  .site-footer a { color: var(--yellow); text-decoration: none; font-weight: 600; }
+  .site-footer a:hover { opacity: 0.8; }
+
+  @media (max-width: 780px) {
+    .header-right > span, .header-right > a { display: none; }
+    .map-tab-btn { white-space: nowrap; flex-shrink: 0; }
+    header h1 { font-size: 1.4rem; }
+    header h1 span { display: none; }
+  }
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; }
+    .header-right { gap: 0.5rem; }
+    .filter-bar { padding: 0.65rem 1rem; top: 59px; }
+    .hero { padding: 1.5rem 1rem; }
+    .main { padding: 1.25rem 1rem 3rem; }
+    .panel-header { padding: 0.85rem 1rem; }
+    .stops-strip { padding: 0.6rem 1rem; }
+    table { font-size: 0.72rem; }
+  }
+
+  /* ── CURRENT-TIME COLUMN HIGHLIGHTING ── */
+  thead th.col-next {
+    background: var(--teal) !important;
+    color: white !important;
+    position: relative;
+  }
+  thead th.col-next::after {
+    content: '▼ now';
+    display: block;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+    margin-top: 1px;
+  }
+  thead th.col-past {
+    opacity: 0.45;
+  }
+  tbody td.col-next {
+    background: #e6f7f9 !important;
+    color: var(--ocean) !important;
+    font-weight: 700 !important;
+    border-left: 2px solid var(--teal);
+    border-right: 2px solid var(--teal);
+  }
+  tbody td.col-past {
+    opacity: 0.4;
+    color: var(--subtle) !important;
+  }
+  /* Ensure even-row stripe doesn't override */
+  tbody tr:nth-child(even) td.col-next {
+    background: #d4f0f4 !important;
+  }
+.kc-logo-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+
+  /* ── MAP TAB ── */
+  .map-tab-btn {
+    display: flex; align-items: center; gap: 0.35rem;
+    background: var(--mist); border: 1.5px solid var(--border);
+    color: var(--ink); padding: 0.3rem 0.85rem; border-radius: 100px;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; font-family: 'Instrument Sans', sans-serif;
+    text-decoration: none;
+  }
+  .map-tab-btn:hover { border-color: var(--teal); color: var(--ocean); }
+  .map-tab-btn.active { background: var(--ocean); color: white; border-color: var(--ocean); }
+
+  /* ── MAP PANEL ── */
+  #map-panel {
+    display: none;
+    position: fixed; inset: 0; top: 62px;
+    z-index: 210; background: white;
+    flex-direction: column;
+  }
+  #map-panel.visible { display: flex; }
+
+  #map-controls {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0.55rem 1.25rem;
+    display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .map-filter-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--subtle); font-weight: 700; margin-right: 0.2rem; }
+  .map-route-btn {
+    display: flex; align-items: center; gap: 0.3rem;
+    border: 1.5px solid var(--border);
+    padding: 0.22rem 0.7rem; border-radius: 100px;
+    font-size: 0.75rem; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; font-family: 'Instrument Sans', sans-serif;
+    background: white; color: var(--text);
+  }
+  .map-route-btn .dot {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  }
+  .map-route-btn.active {
+    background: var(--night); color: white;
+    border-color: var(--night);
+  }
+  .map-route-btn:hover:not(.active) {
+    border-color: var(--ocean); color: var(--ocean);
+  }
+
+  #leaflet-map { flex: 1; }
+
+  /* ── MAP POPUP ── */
+  .bus-popup { font-family: 'Instrument Sans', sans-serif; min-width: 200px; }
+  .bus-popup h4 { font-size: 0.9rem; font-weight: 700; color: var(--ink); margin-bottom: 0.35rem; line-height: 1.25; }
+  .bus-popup .route-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
+  .bus-popup .rbadge {
+    font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem;
+    border-radius: 4px; color: white;
+  }
+  .bus-popup .scroll-sched { max-height: 130px; overflow-y: auto; margin-top: 0.35rem; }
+  .bus-popup table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+  .bus-popup th { text-align: left; font-weight: 700; color: var(--subtle); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.2rem 0.3rem; border-bottom: 1px solid var(--border); }
+  .bus-popup td { padding: 0.2rem 0.3rem; border-bottom: 1px solid #f0f0f0; color: var(--ink); }
+  .bus-popup td:last-child { color: var(--subtle); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 600px) {
+    #map-panel { top: 59px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <h1>Kauaʻi Bus</h1>
+  </div>
+  <div class="header-right">
+    <span class="no-sun">No Sunday Service</span>
+    <span>Eff. Feb 2024</span>
+    <button class="map-tab-btn" id="map-toggle-btn" onclick="toggleMap()">🗺 Map</button>
+    <a href="https://www.thekauaibus.com/map" target="_blank">Live Map ↗</a>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h2>Routes &amp; Schedules</h2>
+    <p>All 9 routes with full stop-by-stop timetables. Tap any route to expand. No Sunday service on any route.</p>
+    <div class="fare-pills">
+      <div class="fare-pill">🎟 General <strong>$2.00/ride</strong></div>
+      <div class="fare-pill">🎓 Reduced <strong>$1.00</strong></div>
+      <div class="fare-pill">♿ ADA accessible · lift-equipped</div>
+      <div class="fare-pill">🚲 Bike racks on all buses</div>
+      <div class="fare-pill">❄️ Air-conditioned</div>
+      <div class="fare-pill">💵 Exact change required</div>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-label">Show:</span>
+  <button class="filter-btn active" data-filter="all">All Routes</button>
+  <button class="filter-btn" data-filter="mainline">Mainline</button>
+  <button class="filter-btn" data-filter="shuttle">Shuttle</button>
+  <button class="filter-btn" data-filter="express">Express</button>
+</div>
+
+<div class="main">
+<div class="section-label">Routes — tap to expand schedule</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 30: KOLOA SHUTTLE
+     Mon–Sat, hourly 6:05am–8:05pm from Kalaheo
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="shuttle">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#0E7490,#22c4d4)">
+      <span class="badge-num">30</span>
+    </div>
+    <div class="panel-title">
+      <h3>Kōloa / Poipū Shuttle</h3>
+      <div class="route-sub" style="color:#0E7490">Shuttle · Kalāheo → Kōloa → Poipū → loop back</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 15 trips</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Kalāheo Neighborhood Ctr</span><span class="stop-arrow">→</span>
+      <span>Brydeswood</span><span class="stop-arrow">→</span>
+      <span>Lāwaʻi Post Office</span><span class="stop-arrow">→</span>
+      <span>Kōloa</span><span class="stop-arrow">→</span>
+      <span>Poipū</span><span class="stop-arrow">→</span>
+      <span class="stop-em">loop back to Kalāheo</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Kalāheo Neighborhood Ctr</td><td>6:05</td><td>7:05</td><td>8:05</td><td>9:05</td><td>10:05</td><td>11:05</td><td>12:05</td><td>1:05</td><td>2:05</td><td>3:05</td><td>4:05</td><td>5:05</td><td>6:05</td><td>7:05</td><td>8:05</td></tr>
+          <tr><td>Brydeswood</td><td>6:09</td><td>7:09</td><td>8:09</td><td>9:09</td><td>10:09</td><td>11:09</td><td>12:09</td><td>1:09</td><td>2:09</td><td>3:09</td><td>4:09</td><td>5:09</td><td>6:09</td><td>7:09</td><td>8:09</td></tr>
+          <tr><td>Across Lāwaʻi Post Office</td><td>6:14</td><td>7:14</td><td>8:14</td><td>9:14</td><td>10:14</td><td>11:14</td><td>12:14</td><td>1:14</td><td>2:14</td><td>3:14</td><td>4:14</td><td>5:14</td><td>6:14</td><td>7:14</td><td>8:14</td></tr>
+          <tr><td>Kōloa Telephone Exchange</td><td>6:21</td><td>7:21</td><td>8:21</td><td>9:21</td><td>10:21</td><td>11:21</td><td>12:21</td><td>1:21</td><td>2:21</td><td>3:21</td><td>4:21</td><td>5:21</td><td>6:21</td><td>7:21</td><td>8:21</td></tr>
+          <tr><td>Kōloa Neighborhood Ctr</td><td>6:22</td><td>7:22</td><td>8:22</td><td>9:22</td><td>10:22</td><td>11:22</td><td>12:22</td><td>1:22</td><td>2:22</td><td>3:22</td><td>4:22</td><td>5:22</td><td>6:22</td><td>7:22</td><td>8:22</td></tr>
+          <tr><td>Kōloa Post Office</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td><td>11:23</td><td>12:23</td><td>1:23</td><td>2:23</td><td>3:23</td><td>4:23</td><td>5:23</td><td>6:23</td><td>7:23</td><td>8:23</td></tr>
+          <tr><td>Kōloa School</td><td>6:25</td><td>7:25</td><td>8:25</td><td>9:25</td><td>10:25</td><td>11:25</td><td>12:25</td><td>1:25</td><td>2:25</td><td>3:25</td><td>4:25</td><td>5:25</td><td>6:25</td><td>7:25</td><td>8:25</td></tr>
+          <tr><td>Kukuiula Store</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td><td>11:28</td><td>12:28</td><td>1:28</td><td>2:28</td><td>3:28</td><td>4:28</td><td>5:28</td><td>6:28</td><td>7:28</td><td>8:28</td></tr>
+          <tr><td>Poipū Rd / Kiahuna Dr</td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td><td>11:30</td><td>12:30</td><td>1:30</td><td>2:30</td><td>3:30</td><td>4:30</td><td>5:30</td><td>6:30</td><td>7:30</td><td>8:30</td></tr>
+          <tr><td>Poipū Rd / Hoowili Rd</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td><td>10:31</td><td>11:31</td><td>12:31</td><td>1:31</td><td>2:31</td><td>3:31</td><td>4:31</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td></tr>
+          <tr class="highlight-stop"><td>Poipū Bypass</td><td>6:33</td><td>7:33</td><td>8:33</td><td>9:33</td><td>10:33</td><td>11:33</td><td>12:33</td><td>1:33</td><td>2:33</td><td>3:33</td><td>4:33</td><td>5:33</td><td>6:33</td><td>7:33</td><td>8:33</td></tr>
+          <tr><td>Kōloa Post Office (return)</td><td>6:38</td><td>7:38</td><td>8:38</td><td>9:38</td><td>10:38</td><td>11:38</td><td>12:38</td><td>1:38</td><td>2:38</td><td>3:38</td><td>4:38</td><td>5:38</td><td>6:38</td><td>7:38</td><td>8:38</td></tr>
+          <tr><td>Kōloa Rd / Horita Rd</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>2:44</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td></tr>
+          <tr class="highlight-stop"><td>Kalāheo Neighborhood Ctr (end)</td><td>6:50</td><td>7:50</td><td>8:50</td><td>9:50</td><td>10:50</td><td>11:50</td><td>12:50</td><td>1:50</td><td>2:50</td><td>3:50</td><td>4:50</td><td>5:50</td><td>6:50</td><td>7:50</td><td>8:50</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 60: KAPAHI SHUTTLE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="shuttle">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#5C7C3A,#84b85a)">
+      <span class="badge-num">60</span>
+    </div>
+    <div class="panel-title">
+      <h3>Kapahi Shuttle</h3>
+      <div class="route-sub" style="color:#5C7C3A">Shuttle · Kapaʻa Skate Park → Kapahi loop</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly loop</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Kapaʻa Skate Park</span><span class="stop-arrow">→</span>
+      <span>Kapaʻa Library</span><span class="stop-arrow">→</span>
+      <span>Mahelona Hospital</span><span class="stop-arrow">→</span>
+      <span>Kapaʻa High School</span><span class="stop-arrow">→</span>
+      <span>Kapahi</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Kapaʻa Skate Park</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+        </tr></thead>
+        <tbody>
+          <tr class="note-row"><td colspan="16">↓ Outbound: Kapaʻa → Kapahi</td></tr>
+          <tr><td>Kapaʻa Middle School <em>(M–F only)</em></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>2:45</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr class="highlight-stop"><td>Kapaʻa Skate Park</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td><td>11:23</td><td>12:23</td><td>1:23</td><td>2:45</td><td>3:23</td><td>4:23</td><td>5:23</td><td>6:23</td><td>7:23</td><td>8:23</td></tr>
+          <tr><td>Kapaʻa Library</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td><td>10:26</td><td>11:26</td><td>12:26</td><td>1:26</td><td>2:46</td><td>3:26</td><td>4:26</td><td>5:26</td><td>6:26</td><td>7:26</td><td>8:26</td></tr>
+          <tr><td>Kapaʻa Neighborhood Center</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td><td>11:28</td><td>12:28</td><td>1:28</td><td>2:48</td><td>3:28</td><td>4:28</td><td>5:28</td><td>6:28</td><td>7:28</td><td>8:28</td></tr>
+          <tr><td>Friendship House <em>(M–F)</em></td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td><td>11:30</td><td>12:30</td><td>1:30</td><td>2:50</td><td>3:30</td><td>4:30</td><td>5:30</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Mahelona Hospital</td><td>6:33</td><td>7:33</td><td>8:33</td><td>9:33</td><td>10:33</td><td>11:33</td><td>12:33</td><td>1:33</td><td>2:53</td><td>3:33</td><td>4:33</td><td>5:33</td><td>6:31</td><td>7:31</td><td>8:31</td></tr>
+          <tr><td>Kapaʻa High School</td><td>6:35</td><td>7:35</td><td>8:35</td><td>9:35</td><td>10:35</td><td>11:35</td><td>12:35</td><td>1:35</td><td>2:55</td><td>3:35</td><td>4:35</td><td>5:35</td><td>6:33</td><td>7:33</td><td>8:33</td></tr>
+          <tr><td>Across Kapahi Food Mart</td><td>6:37</td><td>7:37</td><td>8:37</td><td>9:37</td><td>10:37</td><td>11:37</td><td>12:37</td><td>1:37</td><td>2:57</td><td>3:37</td><td>4:37</td><td>5:37</td><td>6:35</td><td>7:35</td><td>8:35</td></tr>
+          <tr><td>Kapahi Park</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td><td>11:39</td><td>12:39</td><td>1:39</td><td>2:59</td><td>3:39</td><td>4:39</td><td>5:39</td><td>6:37</td><td>7:37</td><td>8:37</td></tr>
+          <tr><td>Kapahi Food Mart</td><td>6:41</td><td>7:41</td><td>8:41</td><td>9:41</td><td>10:41</td><td>11:41</td><td>12:41</td><td>1:41</td><td>3:01</td><td>3:41</td><td>4:41</td><td>5:41</td><td>6:39</td><td>7:39</td><td>8:39</td></tr>
+          <tr><td>Kawaihau Rd / Kahana St</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td><td>11:43</td><td>12:43</td><td>1:43</td><td>3:03</td><td>3:43</td><td>4:43</td><td>5:43</td><td>6:41</td><td>7:41</td><td>8:41</td></tr>
+          <tr><td>Kawaihau Rd / Malakia St</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>3:04</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:42</td><td>7:42</td><td>8:42</td></tr>
+          <tr class="note-row"><td colspan="16">↓ Return loop back to Kapaʻa</td></tr>
+          <tr><td>Across Kapaʻa High School</td><td>6:45</td><td>7:45</td><td>8:45</td><td>9:45</td><td>10:45</td><td>11:45</td><td>12:45</td><td>1:45</td><td>3:05</td><td>3:45</td><td>4:45</td><td>5:45</td><td>6:43</td><td>7:43</td><td>8:43</td></tr>
+          <tr><td>Across Mahelona Hospital</td><td>6:46</td><td>7:46</td><td>8:46</td><td>9:46</td><td>10:46</td><td>11:46</td><td>12:46</td><td>1:46</td><td>3:06</td><td>3:46</td><td>4:46</td><td>5:46</td><td>6:44</td><td>7:44</td><td>8:44</td></tr>
+          <tr><td>Across Kapaʻa N-hood Center</td><td>6:49</td><td>7:49</td><td>8:49</td><td>9:49</td><td>10:49</td><td>11:49</td><td>12:49</td><td>1:49</td><td>3:09</td><td>3:49</td><td>4:49</td><td>5:49</td><td>6:47</td><td>7:47</td><td>8:47</td></tr>
+          <tr class="highlight-stop"><td>Kapaʻa Skate Park (return)</td><td>6:53</td><td>7:53</td><td>8:53</td><td>9:53</td><td>10:53</td><td>11:53</td><td>12:53</td><td>1:53</td><td>3:13</td><td>3:53</td><td>4:53</td><td>5:53</td><td>6:51</td><td>7:51</td><td>8:51</td></tr>
+          <tr class="note-row"><td colspan="16">School runs (Mon–Fri only): Kapaʻa Skate Park → Kapaʻa Middle School at 6:55, 7:55 · return 7:05, 8:05</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 70: LIHUE SHUTTLE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="shuttle">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#D94F3D,#f07060)">
+      <span class="badge-num">70</span>
+    </div>
+    <div class="panel-title">
+      <h3>Līhuʻe Shuttle</h3>
+      <div class="route-sub" style="color:#D94F3D">Shuttle · Kukui Grove loop through downtown Līhuʻe</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 5:55am–9:41pm</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Kukui Grove</span><span class="stop-arrow">→</span>
+      <span>Rice St</span><span class="stop-arrow">→</span>
+      <span>Wilcox Hospital</span><span class="stop-arrow">→</span>
+      <span>Kūhiō Medical Ctr</span><span class="stop-arrow">→</span>
+      <span>Civic Center</span><span class="stop-arrow">→</span>
+      <span>Walmart</span><span class="stop-arrow">→</span>
+      <span>Target</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Kukui Grove</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Kukui Grove – First Hwn Bank</td><td>5:55</td><td>6:55</td><td>7:55</td><td>8:55</td><td>9:55</td><td>10:55</td><td>11:55</td><td>12:55</td><td>1:55</td><td>2:55</td><td>3:55</td><td>4:55</td><td>5:55</td><td>6:55</td><td>7:55</td><td>8:55</td></tr>
+          <tr><td>Across Garden Island Inn</td><td>5:59</td><td>6:59</td><td>7:59</td><td>8:59</td><td>9:59</td><td>10:59</td><td>11:59</td><td>12:59</td><td>1:59</td><td>2:59</td><td>3:59</td><td>4:59</td><td>5:59</td><td>6:59</td><td>7:59</td><td>8:59</td></tr>
+          <tr><td>Rice St / Hoʻolako St</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td><td>11:01</td><td>12:01</td><td>1:01</td><td>2:01</td><td>3:01</td><td>4:01</td><td>5:01</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td></tr>
+          <tr><td>Rice St / Hardy St</td><td>6:03</td><td>7:03</td><td>8:03</td><td>9:03</td><td>10:03</td><td>11:03</td><td>12:03</td><td>1:03</td><td>2:03</td><td>3:03</td><td>4:03</td><td>5:03</td><td>6:03</td><td>7:03</td><td>8:03</td><td>9:03</td></tr>
+          <tr><td>Rice St / Umi St</td><td>6:04</td><td>7:04</td><td>8:04</td><td>9:04</td><td>10:04</td><td>11:04</td><td>12:04</td><td>1:04</td><td>2:04</td><td>3:04</td><td>4:04</td><td>5:04</td><td>6:04</td><td>7:04</td><td>8:04</td><td>9:04</td></tr>
+          <tr><td>Līhuʻe Gardens</td><td>6:08</td><td>7:08</td><td>8:08</td><td>9:08</td><td>10:08</td><td>11:08</td><td>12:08</td><td>1:08</td><td>2:08</td><td>3:08</td><td>4:08</td><td>5:08</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>6:11</td><td>7:11</td><td>8:11</td><td>9:11</td><td>10:11</td><td>11:11</td><td>12:11</td><td>1:11</td><td>2:11</td><td>3:11</td><td>4:11</td><td>5:11</td><td>6:11</td><td>7:11</td><td>8:11</td><td>9:11</td></tr>
+          <tr><td>Walmart</td><td>6:14</td><td>7:14</td><td>8:14</td><td>9:14</td><td>10:14</td><td>11:14</td><td>12:14</td><td>1:14</td><td>2:14</td><td>3:14</td><td>4:14</td><td>5:14</td><td>6:14</td><td>7:14</td><td>8:14</td><td>9:14</td></tr>
+          <tr><td>Across Fish Express</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td><td>10:16</td><td>11:16</td><td>12:16</td><td>1:16</td><td>2:16</td><td>3:16</td><td>4:16</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td></tr>
+          <tr><td>Wilcox Hospital</td><td>6:18</td><td>7:18</td><td>8:18</td><td>9:18</td><td>10:18</td><td>11:18</td><td>12:18</td><td>1:18</td><td>2:18</td><td>3:18</td><td>4:18</td><td>5:18</td><td>6:18</td><td>7:18</td><td>8:18</td><td>9:18</td></tr>
+          <tr><td>Līhuʻe Neighborhood Center</td><td>—</td><td>7:19</td><td>8:19</td><td>9:19</td><td>10:19</td><td>11:19</td><td>12:19</td><td>1:19</td><td>2:19</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Kūhiō Medical Center</td><td>6:20</td><td>7:20</td><td>8:20</td><td>9:20</td><td>10:20</td><td>11:20</td><td>12:20</td><td>1:20</td><td>2:20</td><td>3:20</td><td>4:20</td><td>5:20</td><td>6:20</td><td>7:20</td><td>8:20</td><td>9:20</td></tr>
+          <tr><td>Līhuʻe Gardens (return)</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td><td>11:23</td><td>12:23</td><td>1:23</td><td>2:23</td><td>3:23</td><td>4:23</td><td>5:23</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Eiwa St / Civic Center (return)</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td><td>10:26</td><td>11:26</td><td>12:26</td><td>1:26</td><td>2:26</td><td>3:26</td><td>4:26</td><td>5:26</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td></tr>
+          <tr><td>Rice St / Ewalu St</td><td>6:27</td><td>7:27</td><td>8:27</td><td>9:27</td><td>10:27</td><td>11:27</td><td>12:27</td><td>1:27</td><td>2:27</td><td>3:27</td><td>4:27</td><td>5:27</td><td>6:27</td><td>7:27</td><td>8:27</td><td>9:27</td></tr>
+          <tr><td>Rice St / Kalena St</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td><td>11:28</td><td>12:28</td><td>1:28</td><td>2:28</td><td>3:28</td><td>4:28</td><td>5:28</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td></tr>
+          <tr><td>Rice St / Hoʻolako St</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td><td>10:29</td><td>11:29</td><td>12:29</td><td>1:29</td><td>2:29</td><td>3:29</td><td>4:29</td><td>5:29</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td></tr>
+          <tr><td>Kauaʻi High School <em>(M–F)</em></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>2:31</td><td>3:31</td><td>4:31</td><td>5:31</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Garden Island Inn</td><td>6:32</td><td>7:32</td><td>8:32</td><td>9:32</td><td>10:32</td><td>11:32</td><td>12:32</td><td>1:32</td><td>2:32</td><td>3:32</td><td>4:32</td><td>5:32</td><td>6:32</td><td>7:32</td><td>8:32</td><td>9:32</td></tr>
+          <tr><td>Kukui Grove – HMSA Bldg</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td><td>10:36</td><td>11:36</td><td>12:36</td><td>1:36</td><td>2:36</td><td>3:36</td><td>4:36</td><td>5:36</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td></tr>
+          <tr><td>Target</td><td>6:38</td><td>7:38</td><td>8:38</td><td>9:38</td><td>10:38</td><td>11:38</td><td>12:38</td><td>1:38</td><td>2:38</td><td>3:38</td><td>4:38</td><td>5:38</td><td>6:38</td><td>7:38</td><td>8:38</td><td>9:38</td></tr>
+          <tr class="highlight-stop"><td>Kukui Grove – First Hwn Bank (end)</td><td>6:41</td><td>7:41</td><td>8:41</td><td>9:41</td><td>10:41</td><td>11:41</td><td>12:41</td><td>1:41</td><td>2:41</td><td>3:41</td><td>4:41</td><td>5:41</td><td>6:41</td><td>7:41</td><td>8:41</td><td>9:41</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/files/content/public/v/31/government/departments-agencies/transportation/bus-schedules/route-70-lihue.pdf" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 100: KEKAHA → LIHUE MAINLINE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="mainline">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#006B8F,#00A8B5)">
+      <span class="badge-num">100</span>
+    </div>
+    <div class="panel-title">
+      <h3>Kekaha → Līhuʻe Mainline</h3>
+      <div class="route-sub" style="color:var(--ocean)">Mainline · Westside · Kekaha to Līhuʻe Airport &amp; Courthouse</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 5:15am–10:47pm</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Elepaio Rd (Kekaha)</span><span class="stop-arrow">→</span>
+      <span>Waimea</span><span class="stop-arrow">→</span>
+      <span>Hanapēpē</span><span class="stop-arrow">→</span>
+      <span>Eleele</span><span class="stop-arrow">→</span>
+      <span>Kalāheo</span><span class="stop-arrow">→</span>
+      <span>Lāwaʻi</span><span class="stop-arrow">→</span>
+      <span>KCC</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span>Civic Center</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Līhuʻe Airport &amp; Courthouse</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Elepaio Rd / Akialoa Rd</td><td>5:15</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td><td>10:15</td><td>11:15</td><td>12:15</td><td>1:15</td><td>2:15</td><td>3:15</td><td>4:15</td><td>5:15</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td></tr>
+          <tr><td>Elepaio Rd / Akekeke Rd</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td><td>10:16</td><td>11:16</td><td>12:16</td><td>1:16</td><td>2:16</td><td>3:16</td><td>4:16</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td></tr>
+          <tr><td>Kekaha Neighborhood Center</td><td>5:17</td><td>6:17</td><td>7:17</td><td>8:17</td><td>9:17</td><td>10:17</td><td>11:17</td><td>12:17</td><td>1:17</td><td>2:17</td><td>3:17</td><td>4:17</td><td>5:17</td><td>6:17</td><td>7:17</td><td>8:17</td><td>9:17</td></tr>
+          <tr><td>Across Kekaha Elderly Housing</td><td>5:18</td><td>6:18</td><td>7:18</td><td>8:18</td><td>9:18</td><td>10:18</td><td>11:18</td><td>12:18</td><td>1:18</td><td>2:18</td><td>3:18</td><td>4:18</td><td>5:18</td><td>6:18</td><td>7:18</td><td>8:18</td><td>9:18</td></tr>
+          <tr><td>Elepaio Rd / Io Rd</td><td>5:19</td><td>6:19</td><td>7:19</td><td>8:19</td><td>9:19</td><td>10:19</td><td>11:19</td><td>12:19</td><td>1:19</td><td>2:19</td><td>3:19</td><td>4:19</td><td>5:19</td><td>6:19</td><td>7:19</td><td>8:19</td><td>9:19</td></tr>
+          <tr><td>Elepaio Rd / Iwa Rd</td><td>5:20</td><td>6:20</td><td>7:20</td><td>8:20</td><td>9:20</td><td>10:20</td><td>11:20</td><td>12:20</td><td>1:20</td><td>2:20</td><td>3:20</td><td>4:20</td><td>5:20</td><td>6:20</td><td>7:20</td><td>8:20</td><td>9:20</td></tr>
+          <tr><td>Elepaio Rd / Pueo Rd</td><td>5:21</td><td>6:21</td><td>7:21</td><td>8:21</td><td>9:21</td><td>10:21</td><td>11:21</td><td>12:21</td><td>1:21</td><td>2:21</td><td>3:21</td><td>4:21</td><td>5:21</td><td>6:21</td><td>7:21</td><td>8:21</td><td>9:21</td></tr>
+          <tr><td>Old Kekaha Store</td><td>5:22</td><td>6:22</td><td>7:22</td><td>8:22</td><td>9:22</td><td>10:22</td><td>11:22</td><td>12:22</td><td>1:22</td><td>2:22</td><td>3:22</td><td>4:22</td><td>5:22</td><td>6:22</td><td>7:22</td><td>8:22</td><td>9:22</td></tr>
+          <tr><td>Waimea Athletic Field</td><td>5:25</td><td>6:25</td><td>7:25</td><td>8:25</td><td>9:25</td><td>10:25</td><td>11:25</td><td>12:25</td><td>1:25</td><td>2:25</td><td>3:25</td><td>4:25</td><td>5:25</td><td>6:25</td><td>7:25</td><td>8:25</td><td>9:25</td></tr>
+          <tr><td>KVMH Foyer</td><td>5:27</td><td>6:27</td><td>7:27</td><td>8:27</td><td>9:27</td><td>10:27</td><td>11:27</td><td>12:27</td><td>1:27</td><td>2:27</td><td>3:27</td><td>4:27</td><td>5:27</td><td>6:27</td><td>7:27</td><td>8:27</td><td>9:27</td></tr>
+          <tr><td>Waimea Neighborhood Center</td><td>5:29</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td><td>10:29</td><td>11:29</td><td>12:29</td><td>1:29</td><td>2:29</td><td>3:29</td><td>4:29</td><td>5:29</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td></tr>
+          <tr><td>Ishihara Market</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td><td>10:31</td><td>11:31</td><td>12:31</td><td>1:31</td><td>2:31</td><td>3:31</td><td>4:31</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td></tr>
+          <tr><td>Makaweli Post Office</td><td>5:36</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td><td>10:36</td><td>11:36</td><td>12:36</td><td>1:36</td><td>2:36</td><td>3:36</td><td>4:36</td><td>5:36</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td></tr>
+          <tr><td>Kaumakani Thrifty Mart</td><td>5:40</td><td>6:40</td><td>7:40</td><td>8:40</td><td>9:40</td><td>10:40</td><td>11:40</td><td>12:40</td><td>1:40</td><td>2:40</td><td>3:40</td><td>4:40</td><td>5:40</td><td>6:40</td><td>7:40</td><td>8:40</td><td>9:40</td></tr>
+          <tr><td>Hanapēpē Armory</td><td>5:43</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td><td>11:43</td><td>12:43</td><td>1:43</td><td>2:43</td><td>3:43</td><td>4:43</td><td>5:43</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td></tr>
+          <tr><td>Hanapēpē 1st United Church</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>2:44</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td></tr>
+          <tr><td>Kealaula Eleele</td><td>5:47</td><td>6:47</td><td>7:47</td><td>8:47</td><td>9:47</td><td>10:47</td><td>11:47</td><td>12:47</td><td>1:47</td><td>2:47</td><td>3:47</td><td>4:47</td><td>5:47</td><td>6:47</td><td>7:47</td><td>8:47</td><td>9:47</td></tr>
+          <tr><td>Eleele Nani (Mahea Rd)</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td><td>10:51</td><td>11:51</td><td>12:51</td><td>1:51</td><td>2:51</td><td>3:51</td><td>4:51</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td></tr>
+          <tr><td>Kalāheo Post Office</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td><td>11:01</td><td>12:01</td><td>1:01</td><td>2:01</td><td>3:01</td><td>4:01</td><td>5:01</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td></tr>
+          <tr><td>Puʻu Rd / Hokua Rd</td><td>6:03</td><td>7:03</td><td>8:03</td><td>9:03</td><td>10:03</td><td>11:03</td><td>12:03</td><td>1:03</td><td>2:03</td><td>3:03</td><td>4:03</td><td>5:03</td><td>6:03</td><td>7:03</td><td>8:03</td><td>9:03</td><td>10:03</td></tr>
+          <tr><td>Across Lāwaʻi Post Office</td><td>6:05</td><td>7:05</td><td>8:05</td><td>9:05</td><td>10:05</td><td>11:05</td><td>12:05</td><td>1:05</td><td>2:05</td><td>3:05</td><td>4:05</td><td>5:05</td><td>6:05</td><td>7:05</td><td>8:05</td><td>9:05</td><td>10:05</td></tr>
+          <tr><td>KCC Performing Arts Ctr <em>(M–F)</em></td><td>6:17</td><td>7:17</td><td>8:17</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – Across KCC</td><td>6:19</td><td>7:19</td><td>8:19</td><td>9:19</td><td>10:19</td><td>11:19</td><td>12:19</td><td>1:19</td><td>2:19</td><td>3:19</td><td>4:19</td><td>5:19</td><td>6:19</td><td>7:19</td><td>8:19</td><td>9:19</td><td>10:19</td></tr>
+          <tr><td>Hokulei Village – Kaumaluaʻii Hwy</td><td>6:21</td><td>7:21</td><td>8:21</td><td>9:21</td><td>10:21</td><td>11:21</td><td>12:21</td><td>1:21</td><td>2:21</td><td>3:21</td><td>4:21</td><td>5:21</td><td>6:21</td><td>7:21</td><td>8:21</td><td>9:21</td><td>10:21</td></tr>
+          <tr><td>Kukui Grove</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td><td>11:23</td><td>12:23</td><td>1:23</td><td>2:23</td><td>3:23</td><td>4:23</td><td>5:23</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td><td>11:28</td><td>12:28</td><td>1:28</td><td>2:28</td><td>3:28</td><td>4:28</td><td>5:28</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td></tr>
+          <tr><td>Across Fish Express</td><td>6:33</td><td>7:33</td><td>8:33</td><td>9:33</td><td>10:33</td><td>11:33</td><td>12:33</td><td>1:33</td><td>2:33</td><td>3:33</td><td>4:33</td><td>5:33</td><td>6:33</td><td>7:33</td><td>8:33</td><td>9:33</td><td>10:33</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td><td>10:36</td><td>11:36</td><td>12:36</td><td>1:36</td><td>2:36</td><td>3:36</td><td>4:36</td><td>5:36</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td><td>10:36</td></tr>
+          <tr><td>Peter Rayno Park</td><td>6:38</td><td>7:38</td><td>8:38</td><td>9:38</td><td>10:38</td><td>11:38</td><td>12:38</td><td>1:38</td><td>2:38</td><td>3:38</td><td>4:38</td><td>5:38</td><td>6:38</td><td>7:38</td><td>8:38</td><td>9:38</td><td>10:38</td></tr>
+          <tr><td>Līhuʻe Airport A</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td><td>11:43</td><td>12:43</td><td>1:43</td><td>2:43</td><td>3:43</td><td>4:43</td><td>5:43</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td></tr>
+          <tr><td>Līhuʻe Airport B</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>2:44</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td></tr>
+          <tr class="highlight-stop"><td>Līhuʻe Courthouse</td><td>6:47</td><td>7:47</td><td>8:47</td><td>9:47</td><td>10:47</td><td>11:47</td><td>12:47</td><td>1:47</td><td>2:47</td><td>3:47</td><td>4:47</td><td>5:47</td><td>6:47</td><td>7:47</td><td>8:47</td><td>9:47</td><td>10:47</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 200: LIHUE → KEKAHA MAINLINE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="mainline">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#005f7a,#0099aa)">
+      <span class="badge-num">200</span>
+    </div>
+    <div class="panel-title">
+      <h3>Līhuʻe → Kekaha Mainline</h3>
+      <div class="route-sub" style="color:var(--ocean)">Mainline · Westside · Return direction from Līhuʻe Airport to Kekaha</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 5:25am–9:02pm</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Līhuʻe Courthouse</span><span class="stop-arrow">→</span>
+      <span>Airport</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span>KCC</span><span class="stop-arrow">→</span>
+      <span>Kalāheo</span><span class="stop-arrow">→</span>
+      <span>Eleele</span><span class="stop-arrow">→</span>
+      <span>Hanapēpē</span><span class="stop-arrow">→</span>
+      <span>Waimea</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Kekaha</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Līhuʻe Courthouse</td><td>5:25</td><td>6:25</td><td>7:25</td><td>8:25</td><td>9:25</td><td>10:25</td><td>11:25</td><td>12:25</td><td>1:25</td><td>2:25</td><td>3:25</td><td>4:25</td><td>5:25</td><td>6:25</td><td>7:25</td></tr>
+          <tr><td>Līhuʻe Airport A</td><td>5:29</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td><td>10:29</td><td>11:29</td><td>12:29</td><td>1:29</td><td>2:29</td><td>3:29</td><td>4:29</td><td>5:29</td><td>6:29</td><td>7:29</td></tr>
+          <tr><td>Līhuʻe Airport B</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td><td>10:31</td><td>11:31</td><td>12:31</td><td>1:31</td><td>2:31</td><td>3:31</td><td>4:31</td><td>5:31</td><td>6:31</td><td>7:31</td></tr>
+          <tr><td>Kalepa Village</td><td>5:37</td><td>6:37</td><td>7:37</td><td>8:37</td><td>9:37</td><td>10:37</td><td>11:37</td><td>12:37</td><td>1:37</td><td>2:37</td><td>3:37</td><td>4:37</td><td>5:37</td><td>6:37</td><td>7:37</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>5:39</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td><td>11:39</td><td>12:39</td><td>1:39</td><td>2:39</td><td>3:39</td><td>4:39</td><td>5:39</td><td>6:39</td><td>7:39</td></tr>
+          <tr><td>Kūhiō Medical Center</td><td>5:42</td><td>6:42</td><td>7:42</td><td>8:42</td><td>9:42</td><td>10:42</td><td>11:42</td><td>12:42</td><td>1:42</td><td>2:42</td><td>3:42</td><td>4:42</td><td>5:42</td><td>6:42</td><td>7:42</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>5:46</td><td>6:46</td><td>7:46</td><td>8:46</td><td>9:46</td><td>10:46</td><td>11:46</td><td>12:46</td><td>1:46</td><td>2:46</td><td>3:46</td><td>4:46</td><td>5:46</td><td>6:46</td><td>7:46</td></tr>
+          <tr><td>Kukui Grove – First Hwn Bank</td><td>5:52</td><td>6:52</td><td>7:52</td><td>8:52</td><td>9:52</td><td>10:52</td><td>11:52</td><td>12:52</td><td>1:52</td><td>2:52</td><td>3:52</td><td>4:52</td><td>5:52</td><td>6:52</td><td>7:52</td></tr>
+          <tr><td>Hokulei Village – Nuhou Rd</td><td>5:55</td><td>6:55</td><td>7:55</td><td>8:55</td><td>9:55</td><td>10:55</td><td>11:55</td><td>12:55</td><td>1:55</td><td>2:55</td><td>3:55</td><td>4:55</td><td>5:55</td><td>6:55</td><td>7:55</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – KCC</td><td>5:57</td><td>6:57</td><td>7:57</td><td>8:57</td><td>9:57</td><td>10:57</td><td>11:57</td><td>12:57</td><td>1:57</td><td>2:57</td><td>3:57</td><td>4:57</td><td>5:57</td><td>6:57</td><td>7:57</td></tr>
+          <tr><td>KCC Performing Arts Center</td><td>5:58</td><td>6:58</td><td>7:58</td><td>8:58</td><td>9:58</td><td>10:58</td><td>11:58</td><td>12:58</td><td>1:58</td><td>2:58</td><td>3:58</td><td>4:58</td><td>5:58</td><td>6:58</td><td>7:58</td></tr>
+          <tr><td>Lāwaʻi Post Office</td><td>6:11</td><td>7:11</td><td>8:11</td><td>9:11</td><td>10:11</td><td>11:11</td><td>12:11</td><td>1:11</td><td>2:11</td><td>3:11</td><td>4:11</td><td>5:11</td><td>6:11</td><td>7:11</td><td>8:11</td></tr>
+          <tr><td>Puʻu Rd / Hokua Rd</td><td>6:14</td><td>7:14</td><td>8:14</td><td>9:14</td><td>10:14</td><td>11:14</td><td>12:14</td><td>1:14</td><td>2:14</td><td>3:14</td><td>4:14</td><td>5:14</td><td>6:14</td><td>7:14</td><td>8:14</td></tr>
+          <tr><td>Kalāheo Neighborhood Center</td><td>6:17</td><td>7:17</td><td>8:17</td><td>9:17</td><td>10:17</td><td>11:17</td><td>12:17</td><td>1:17</td><td>2:17</td><td>3:17</td><td>4:17</td><td>5:17</td><td>6:17</td><td>7:17</td><td>8:17</td></tr>
+          <tr><td>Eleele Nani (Laulea St)</td><td>6:27</td><td>7:27</td><td>8:27</td><td>9:27</td><td>10:27</td><td>11:27</td><td>12:27</td><td>1:27</td><td>2:27</td><td>3:27</td><td>4:27</td><td>5:27</td><td>6:27</td><td>7:27</td><td>8:27</td></tr>
+          <tr><td>Kealaula Eleele</td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td><td>11:30</td><td>12:30</td><td>1:30</td><td>2:30</td><td>3:30</td><td>4:30</td><td>5:30</td><td>6:30</td><td>7:30</td><td>8:30</td></tr>
+          <tr><td>Westside Pharmacy</td><td>6:33</td><td>7:33</td><td>8:33</td><td>9:33</td><td>10:33</td><td>11:33</td><td>12:33</td><td>1:33</td><td>2:33</td><td>3:33</td><td>4:33</td><td>5:33</td><td>6:33</td><td>7:33</td><td>8:33</td></tr>
+          <tr><td>Mariko Store</td><td>6:34</td><td>7:34</td><td>8:34</td><td>9:34</td><td>10:34</td><td>11:34</td><td>12:34</td><td>1:34</td><td>2:34</td><td>3:34</td><td>4:34</td><td>5:34</td><td>6:34</td><td>7:34</td><td>8:34</td></tr>
+          <tr><td>Kaumakani Thrifty Mart</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td><td>11:39</td><td>12:39</td><td>1:39</td><td>2:39</td><td>3:39</td><td>4:39</td><td>5:39</td><td>6:39</td><td>7:39</td><td>8:39</td></tr>
+          <tr><td>Makaweli Post Office</td><td>6:42</td><td>7:42</td><td>8:42</td><td>9:42</td><td>10:42</td><td>11:42</td><td>12:42</td><td>1:42</td><td>2:42</td><td>3:42</td><td>4:42</td><td>5:42</td><td>6:42</td><td>7:42</td><td>8:42</td></tr>
+          <tr><td>Waimea First Hwn Bank</td><td>6:47</td><td>7:47</td><td>8:47</td><td>9:47</td><td>10:47</td><td>11:47</td><td>12:47</td><td>1:47</td><td>2:47</td><td>3:47</td><td>4:47</td><td>5:47</td><td>6:47</td><td>7:47</td><td>8:47</td></tr>
+          <tr><td>Waimea Neighborhood Center</td><td>6:48</td><td>7:48</td><td>8:48</td><td>9:48</td><td>10:48</td><td>11:48</td><td>12:48</td><td>1:48</td><td>2:48</td><td>3:48</td><td>4:48</td><td>5:48</td><td>6:48</td><td>7:48</td><td>8:48</td></tr>
+          <tr><td>KVMH Foyer</td><td>6:50</td><td>7:50</td><td>8:50</td><td>9:50</td><td>10:50</td><td>11:50</td><td>12:50</td><td>1:50</td><td>2:50</td><td>3:50</td><td>4:50</td><td>5:50</td><td>6:50</td><td>7:50</td><td>8:50</td></tr>
+          <tr><td>Waimea Athletic Field</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td><td>10:51</td><td>11:51</td><td>12:51</td><td>1:51</td><td>2:51</td><td>3:51</td><td>4:51</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td></tr>
+          <tr><td>Methodist Church</td><td>6:56</td><td>7:56</td><td>8:56</td><td>9:56</td><td>10:56</td><td>11:56</td><td>12:56</td><td>1:56</td><td>2:56</td><td>3:56</td><td>4:56</td><td>5:56</td><td>6:56</td><td>7:56</td><td>8:56</td></tr>
+          <tr><td>Elepaio Rd / Iwa Rd</td><td>6:57</td><td>7:57</td><td>8:57</td><td>9:57</td><td>10:57</td><td>11:57</td><td>12:57</td><td>1:57</td><td>2:57</td><td>3:57</td><td>4:57</td><td>5:57</td><td>6:57</td><td>7:57</td><td>8:57</td></tr>
+          <tr><td>Elepaio Rd / Io Rd</td><td>6:58</td><td>7:58</td><td>8:58</td><td>9:58</td><td>10:58</td><td>11:58</td><td>12:58</td><td>1:58</td><td>2:58</td><td>3:58</td><td>4:58</td><td>5:58</td><td>6:58</td><td>7:58</td><td>8:58</td></tr>
+          <tr><td>Kekaha Elderly Housing</td><td>6:59</td><td>7:59</td><td>8:59</td><td>9:59</td><td>10:59</td><td>11:59</td><td>12:59</td><td>1:59</td><td>2:59</td><td>3:59</td><td>4:59</td><td>5:59</td><td>6:59</td><td>7:59</td><td>8:59</td></tr>
+          <tr><td>Across Kekaha Neighborhood Ctr</td><td>7:00</td><td>8:00</td><td>9:00</td><td>10:00</td><td>11:00</td><td>12:00</td><td>1:00</td><td>2:00</td><td>3:00</td><td>4:00</td><td>5:00</td><td>6:00</td><td>7:00</td><td>8:00</td><td>9:00</td></tr>
+          <tr><td>Elepaio Rd / Akekeke Rd</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td><td>11:01</td><td>12:01</td><td>1:01</td><td>2:01</td><td>3:01</td><td>4:01</td><td>5:01</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td></tr>
+          <tr class="highlight-stop"><td>Elepaio Rd / Akialoa Rd</td><td>7:02</td><td>8:02</td><td>9:02</td><td>10:02</td><td>11:02</td><td>12:02</td><td>1:02</td><td>2:02</td><td>3:02</td><td>4:02</td><td>5:02</td><td>6:02</td><td>7:02</td><td>8:02</td><td>9:02</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 400: HANALEI → LIHUE MAINLINE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="mainline">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#3A7D44,#56b368)">
+      <span class="badge-num">400</span>
+    </div>
+    <div class="panel-title">
+      <h3>Hanalei → Līhuʻe Mainline</h3>
+      <div class="route-sub" style="color:var(--leaf)">Mainline · Northside · Hanalei to KCC via Princeville, Kilauea, Kapaʻa</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 5:15am–10:45pm</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Hanalei Neighborhood Ctr</span><span class="stop-arrow">→</span>
+      <span>Princeville Library</span><span class="stop-arrow">→</span>
+      <span>Kilauea</span><span class="stop-arrow">→</span>
+      <span>Anahola</span><span class="stop-arrow">→</span>
+      <span>Kapaʻa</span><span class="stop-arrow">→</span>
+      <span>Wailuā</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span class="stop-em">KCC</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Hanalei Neighborhood Center</td><td>5:15</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td><td>10:15</td><td>11:15</td><td>12:15</td><td>1:15</td><td>2:15</td><td>3:15</td><td>4:15</td><td>5:15</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td></tr>
+          <tr><td>Hanalei Center</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td><td>10:16</td><td>11:16</td><td>12:16</td><td>1:16</td><td>2:16</td><td>3:16</td><td>4:16</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td></tr>
+          <tr><td>Across Princeville Library</td><td>5:23</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td><td>10:23</td><td>11:23</td><td>12:23</td><td>1:23</td><td>2:23</td><td>3:23</td><td>4:23</td><td>5:23</td><td>6:23</td><td>7:23</td><td>8:23</td><td>9:23</td></tr>
+          <tr><td>Anaina Hou</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td><td>10:31</td><td>11:31</td><td>12:31</td><td>1:31</td><td>2:31</td><td>3:31</td><td>4:31</td><td>5:31</td><td>6:31</td><td>7:31</td><td>8:31</td><td>9:31</td></tr>
+          <tr><td>Kilauea Gym</td><td>5:35</td><td>6:35</td><td>7:35</td><td>8:35</td><td>9:35</td><td>10:35</td><td>11:35</td><td>12:35</td><td>1:35</td><td>2:35</td><td>3:35</td><td>4:35</td><td>5:35</td><td>6:35</td><td>7:35</td><td>8:35</td><td>9:35</td></tr>
+          <tr><td>Across Kilauea Food Mart</td><td>5:39</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td><td>11:39</td><td>12:39</td><td>1:39</td><td>2:39</td><td>3:39</td><td>4:39</td><td>5:39</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td></tr>
+          <tr><td>Moloaʻa Fruit Stand</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>2:44</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td></tr>
+          <tr><td>Across Anahola Post Office</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td><td>10:51</td><td>11:51</td><td>12:51</td><td>1:51</td><td>2:51</td><td>3:51</td><td>4:51</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td></tr>
+          <tr><td>Across Kukuihale Rd</td><td>5:53</td><td>6:53</td><td>7:53</td><td>8:53</td><td>9:53</td><td>10:53</td><td>11:53</td><td>12:53</td><td>1:53</td><td>2:53</td><td>3:53</td><td>4:53</td><td>5:53</td><td>6:53</td><td>7:53</td><td>8:53</td><td>9:53</td></tr>
+          <tr><td>Across Kealia Beach</td><td>5:57</td><td>6:57</td><td>7:57</td><td>8:57</td><td>9:57</td><td>10:57</td><td>11:57</td><td>12:57</td><td>1:57</td><td>2:57</td><td>3:57</td><td>4:57</td><td>5:57</td><td>6:57</td><td>7:57</td><td>8:57</td><td>9:57</td></tr>
+          <tr><td>Across Kapaʻa Neighborhood Ctr</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td><td>11:01</td><td>12:01</td><td>1:01</td><td>2:01</td><td>3:01</td><td>4:01</td><td>5:01</td><td>6:01</td><td>7:01</td><td>8:01</td><td>9:01</td><td>10:01</td></tr>
+          <tr><td>Kapaʻa Skate Park</td><td>6:04</td><td>7:04</td><td>8:04</td><td>9:04</td><td>10:04</td><td>11:04</td><td>12:04</td><td>1:04</td><td>2:04</td><td>3:04</td><td>4:04</td><td>5:04</td><td>6:04</td><td>7:04</td><td>8:04</td><td>9:04</td><td>10:04</td></tr>
+          <tr><td>Kapaʻa Big Save</td><td>6:07</td><td>7:07</td><td>8:07</td><td>9:07</td><td>10:07</td><td>11:07</td><td>12:07</td><td>1:07</td><td>2:07</td><td>3:07</td><td>4:07</td><td>5:07</td><td>6:07</td><td>7:07</td><td>8:07</td><td>9:07</td><td>10:07</td></tr>
+          <tr><td>Kūhiō Hwy / Hoi Rd</td><td>6:10</td><td>7:10</td><td>8:10</td><td>9:10</td><td>10:10</td><td>11:10</td><td>12:10</td><td>1:10</td><td>2:10</td><td>3:10</td><td>4:10</td><td>5:10</td><td>6:10</td><td>7:10</td><td>8:10</td><td>9:10</td><td>10:10</td></tr>
+          <tr><td>Kūhiō Hwy / Haleilio Rd</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td><td>10:15</td><td>11:15</td><td>12:15</td><td>1:15</td><td>2:15</td><td>3:15</td><td>4:15</td><td>5:15</td><td>6:15</td><td>7:15</td><td>8:15</td><td>9:15</td><td>10:15</td></tr>
+          <tr><td>Kalepa Village</td><td>6:24</td><td>7:24</td><td>8:24</td><td>9:24</td><td>10:24</td><td>11:24</td><td>12:24</td><td>1:24</td><td>2:24</td><td>3:24</td><td>4:24</td><td>5:24</td><td>6:24</td><td>7:24</td><td>8:24</td><td>9:24</td><td>10:24</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td><td>10:26</td><td>11:26</td><td>12:26</td><td>1:26</td><td>2:26</td><td>3:26</td><td>4:26</td><td>5:26</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td><td>10:26</td></tr>
+          <tr><td>Kūhiō Medical Center</td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td><td>11:30</td><td>12:30</td><td>1:30</td><td>2:30</td><td>3:30</td><td>4:30</td><td>5:30</td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>6:34</td><td>7:34</td><td>8:34</td><td>9:34</td><td>10:34</td><td>11:34</td><td>12:34</td><td>1:34</td><td>2:34</td><td>3:34</td><td>4:34</td><td>5:34</td><td>6:34</td><td>7:34</td><td>8:34</td><td>9:34</td><td>10:34</td></tr>
+          <tr><td>Kukui Grove – First Hwn Bank</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td><td>11:39</td><td>12:39</td><td>1:39</td><td>2:39</td><td>3:39</td><td>4:39</td><td>5:39</td><td>6:39</td><td>7:39</td><td>8:39</td><td>9:39</td><td>10:39</td></tr>
+          <tr><td>Hokulei Village – Nuhou Rd</td><td>6:41</td><td>7:41</td><td>8:41</td><td>9:41</td><td>10:41</td><td>11:41</td><td>12:41</td><td>1:41</td><td>2:41</td><td>3:41</td><td>4:41</td><td>5:41</td><td>6:41</td><td>7:41</td><td>8:41</td><td>9:41</td><td>10:41</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – KCC</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td><td>11:43</td><td>12:43</td><td>1:43</td><td>2:43</td><td>3:43</td><td>4:43</td><td>5:43</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td></tr>
+          <tr class="highlight-stop"><td>KCC Performing Arts Center</td><td>6:45</td><td>7:45</td><td>8:45</td><td>9:45</td><td>10:45</td><td>11:45</td><td>12:45</td><td>1:45</td><td>2:45</td><td>3:45</td><td>4:45</td><td>5:45</td><td>6:45</td><td>7:45</td><td>8:45</td><td>9:45</td><td>10:45</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 500: LIHUE → HANALEI MAINLINE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="mainline">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#2d6e38,#4a9f5a)">
+      <span class="badge-num">500</span>
+    </div>
+    <div class="panel-title">
+      <h3>Līhuʻe → Hanalei Mainline</h3>
+      <div class="route-sub" style="color:var(--leaf)">Mainline · Northside · Return direction KCC to Hanalei via Kapaʻa, Kilauea</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-green">Mon–Sat</span>
+      <span class="tag tag-blue">Hourly · 5:25am–8:53pm</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">KCC Performing Arts Ctr</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span>Civic Center</span><span class="stop-arrow">→</span>
+      <span>Kapaʻa</span><span class="stop-arrow">→</span>
+      <span>Kealia</span><span class="stop-arrow">→</span>
+      <span>Kilauea</span><span class="stop-arrow">→</span>
+      <span>Princeville</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Hanalei Neighborhood Ctr</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>KCC Performing Arts Center</td><td>5:25</td><td>6:25</td><td>7:25</td><td>8:25</td><td>9:25</td><td>10:25</td><td>11:25</td><td>12:25</td><td>1:25</td><td>2:25</td><td>3:25</td><td>4:25</td><td>5:25</td><td>6:25</td><td>7:25</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – Across KCC</td><td>5:26</td><td>6:26</td><td>7:26</td><td>8:26</td><td>9:26</td><td>10:26</td><td>11:26</td><td>12:26</td><td>1:26</td><td>2:26</td><td>3:26</td><td>4:26</td><td>5:26</td><td>6:26</td><td>7:26</td></tr>
+          <tr><td>Hokulei Village – Kaumaluaʻii Hwy</td><td>5:28</td><td>6:28</td><td>7:28</td><td>8:28</td><td>9:28</td><td>10:28</td><td>11:28</td><td>12:28</td><td>1:28</td><td>2:28</td><td>3:28</td><td>4:28</td><td>5:28</td><td>6:28</td><td>7:28</td></tr>
+          <tr><td>Kukui Grove – First Hwn Bank</td><td>5:30</td><td>6:30</td><td>7:30</td><td>8:30</td><td>9:30</td><td>10:30</td><td>11:30</td><td>12:30</td><td>1:30</td><td>2:30</td><td>3:30</td><td>4:30</td><td>5:30</td><td>6:30</td><td>7:30</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>5:35</td><td>6:35</td><td>7:35</td><td>8:35</td><td>9:35</td><td>10:35</td><td>11:35</td><td>12:35</td><td>1:35</td><td>2:35</td><td>3:35</td><td>4:35</td><td>5:35</td><td>6:35</td><td>7:35</td></tr>
+          <tr><td>Across Fish Express</td><td>5:40</td><td>6:40</td><td>7:40</td><td>8:40</td><td>9:40</td><td>10:40</td><td>11:40</td><td>12:40</td><td>1:40</td><td>2:40</td><td>3:40</td><td>4:40</td><td>5:40</td><td>6:40</td><td>7:40</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>5:43</td><td>6:43</td><td>7:43</td><td>8:43</td><td>9:43</td><td>10:43</td><td>11:43</td><td>12:43</td><td>1:43</td><td>2:43</td><td>3:43</td><td>4:43</td><td>5:43</td><td>6:43</td><td>7:43</td></tr>
+          <tr><td>Peter Rayno Park</td><td>5:45</td><td>6:45</td><td>7:45</td><td>8:45</td><td>9:45</td><td>10:45</td><td>11:45</td><td>12:45</td><td>1:45</td><td>2:45</td><td>3:45</td><td>4:45</td><td>5:45</td><td>6:45</td><td>7:45</td></tr>
+          <tr><td>Courtyards at Waipouli</td><td>5:52</td><td>6:52</td><td>7:52</td><td>8:52</td><td>9:52</td><td>10:52</td><td>11:52</td><td>12:52</td><td>1:52</td><td>2:52</td><td>3:52</td><td>4:52</td><td>5:52</td><td>6:52</td><td>7:52</td></tr>
+          <tr><td>Waipouli Beach Resort</td><td>5:55</td><td>6:55</td><td>7:55</td><td>8:55</td><td>9:55</td><td>10:55</td><td>11:55</td><td>12:55</td><td>1:55</td><td>2:55</td><td>3:55</td><td>4:55</td><td>5:55</td><td>6:55</td><td>7:55</td></tr>
+          <tr><td>Kapaʻa Hongwanji Mission</td><td>5:58</td><td>6:58</td><td>7:58</td><td>8:58</td><td>9:58</td><td>10:58</td><td>11:58</td><td>12:58</td><td>1:58</td><td>2:58</td><td>3:58</td><td>4:58</td><td>5:58</td><td>6:58</td><td>7:58</td></tr>
+          <tr><td>Pono Kai</td><td>5:59</td><td>6:59</td><td>7:59</td><td>8:59</td><td>9:59</td><td>10:59</td><td>11:59</td><td>12:59</td><td>1:59</td><td>2:59</td><td>3:59</td><td>4:59</td><td>5:59</td><td>6:59</td><td>7:59</td></tr>
+          <tr><td>Kapaʻa Skate Park</td><td>6:02</td><td>7:02</td><td>8:02</td><td>9:02</td><td>10:02</td><td>11:02</td><td>12:02</td><td>1:02</td><td>2:02</td><td>3:02</td><td>4:02</td><td>5:02</td><td>6:02</td><td>7:02</td><td>8:02</td></tr>
+          <tr><td>Kapaʻa Library</td><td>6:05</td><td>7:05</td><td>8:05</td><td>9:05</td><td>10:05</td><td>11:05</td><td>12:05</td><td>1:05</td><td>2:05</td><td>3:05</td><td>4:05</td><td>5:05</td><td>6:05</td><td>7:05</td><td>8:05</td></tr>
+          <tr><td>Kapaʻa Neighborhood Center</td><td>6:06</td><td>7:06</td><td>8:06</td><td>9:06</td><td>10:06</td><td>11:06</td><td>12:06</td><td>1:06</td><td>2:06</td><td>3:06</td><td>4:06</td><td>5:06</td><td>6:06</td><td>7:06</td><td>8:06</td></tr>
+          <tr><td>Kealia Beach</td><td>6:10</td><td>7:10</td><td>8:10</td><td>9:10</td><td>10:10</td><td>11:10</td><td>12:10</td><td>1:10</td><td>2:10</td><td>3:10</td><td>4:10</td><td>5:10</td><td>6:10</td><td>7:10</td><td>8:10</td></tr>
+          <tr><td>Kūhiō Hwy / Kukuihale Rd</td><td>6:14</td><td>7:14</td><td>8:14</td><td>9:14</td><td>10:14</td><td>11:14</td><td>12:14</td><td>1:14</td><td>2:14</td><td>3:14</td><td>4:14</td><td>5:14</td><td>6:14</td><td>7:14</td><td>8:14</td></tr>
+          <tr><td>Anahola Post Office</td><td>6:16</td><td>7:16</td><td>8:16</td><td>9:16</td><td>10:16</td><td>11:16</td><td>12:16</td><td>1:16</td><td>2:16</td><td>3:16</td><td>4:16</td><td>5:16</td><td>6:16</td><td>7:16</td><td>8:16</td></tr>
+          <tr><td>Moloaʻa Fruit Stand</td><td>6:20</td><td>7:20</td><td>8:20</td><td>9:20</td><td>10:20</td><td>11:20</td><td>12:20</td><td>1:20</td><td>2:20</td><td>3:20</td><td>4:20</td><td>5:20</td><td>6:20</td><td>7:20</td><td>8:20</td></tr>
+          <tr><td>Kilauea Food Mart</td><td>6:29</td><td>7:29</td><td>8:29</td><td>9:29</td><td>10:29</td><td>11:29</td><td>12:29</td><td>1:29</td><td>2:29</td><td>3:29</td><td>4:29</td><td>5:29</td><td>6:29</td><td>7:29</td><td>8:29</td></tr>
+          <tr><td>Kilauea Gym</td><td>6:32</td><td>7:32</td><td>8:32</td><td>9:32</td><td>10:32</td><td>11:32</td><td>12:32</td><td>1:32</td><td>2:32</td><td>3:32</td><td>4:32</td><td>5:32</td><td>6:32</td><td>7:32</td><td>8:32</td></tr>
+          <tr><td>Anaina Hou</td><td>6:36</td><td>7:36</td><td>8:36</td><td>9:36</td><td>10:36</td><td>11:36</td><td>12:36</td><td>1:36</td><td>2:36</td><td>3:36</td><td>4:36</td><td>5:36</td><td>6:36</td><td>7:36</td><td>8:36</td></tr>
+          <tr><td>Princeville Shopping Ctr</td><td>6:44</td><td>7:44</td><td>8:44</td><td>9:44</td><td>10:44</td><td>11:44</td><td>12:44</td><td>1:44</td><td>2:44</td><td>3:44</td><td>4:44</td><td>5:44</td><td>6:44</td><td>7:44</td><td>8:44</td></tr>
+          <tr><td>Hanalei Post Office</td><td>6:51</td><td>7:51</td><td>8:51</td><td>9:51</td><td>10:51</td><td>11:51</td><td>12:51</td><td>1:51</td><td>2:51</td><td>3:51</td><td>4:51</td><td>5:51</td><td>6:51</td><td>7:51</td><td>8:51</td></tr>
+          <tr class="highlight-stop"><td>Hanalei Neighborhood Center</td><td>6:53</td><td>7:53</td><td>8:53</td><td>9:53</td><td>10:53</td><td>11:53</td><td>12:53</td><td>1:53</td><td>2:53</td><td>3:53</td><td>4:53</td><td>5:53</td><td>6:53</td><td>7:53</td><td>8:53</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">No Sunday service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 800/850: WAILUA ↔ LIHUE
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="mainline">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#7B5EA7,#9b75d4)">
+      <span class="badge-num">800</span>
+      <span class="badge-sub">/850</span>
+    </div>
+    <div class="panel-title">
+      <h3>Wailuā ↔ Līhuʻe Mainline</h3>
+      <div class="route-sub" style="color:#7B5EA7">Mainline · Wailua Homesteads · Mon–Fri only · 2 morning inbound, 3 afternoon return</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-orange">Mon–Fri Only</span>
+      <span class="tag tag-blue">Limited runs</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Kapaʻa Skate Park</span><span class="stop-arrow">→</span>
+      <span>Wailua Homesteads Park</span><span class="stop-arrow">→</span>
+      <span>Civic Center</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span class="stop-em">KCC</span>
+      <span style="color:var(--subtle);margin:0 0.5rem">·</span>
+      <span style="color:var(--subtle);font-style:italic">Route 850 returns same stops</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr><th>Stop</th><th>800 AM #1</th><th>800 AM #2</th></tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Kapaʻa Skate Park</td><td>6:30 AM</td><td>7:30 AM</td></tr>
+          <tr><td>Kūhiō Hwy / Haleilio Rd</td><td>6:36 AM</td><td>7:36 AM</td></tr>
+          <tr><td>Wailua Houselots Park</td><td>6:39 AM</td><td>7:39 AM</td></tr>
+          <tr><td>Wailua Homesteads Park</td><td>6:50 AM</td><td>7:50 AM</td></tr>
+          <tr><td>Kalepa Village</td><td>7:05 AM</td><td>8:05 AM</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>7:07 AM</td><td>8:07 AM</td></tr>
+          <tr><td>Kūhiō Medical Center</td><td>7:11 AM</td><td>8:11 AM</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>7:15 AM</td><td>8:15 AM</td></tr>
+          <tr><td>Kukui Grove – First Hwn Bank</td><td>7:21 AM</td><td>8:21 AM</td></tr>
+          <tr><td>Hokulei Village – Nuhou Rd</td><td>7:23 AM</td><td>8:23 AM</td></tr>
+          <tr class="highlight-stop"><td>KCC Performing Arts Center</td><td>7:29 AM</td><td>8:29 AM</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="schedule-wrap" style="border-top:1px solid var(--border)">
+      <table>
+        <thead><tr><th>Stop (Route 850 — Return)</th><th>PM #1</th><th>PM #2</th><th>PM #3</th></tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>KCC Performing Arts Center</td><td>12:45 PM</td><td>5:00 PM</td><td>6:30 PM</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – Across KCC</td><td>12:47 PM</td><td>5:02 PM</td><td>6:32 PM</td></tr>
+          <tr><td>Hokulei Village – Kaumaluaʻii Hwy</td><td>12:49 PM</td><td>5:04 PM</td><td>6:34 PM</td></tr>
+          <tr><td>Kukui Grove</td><td>12:51 PM</td><td>5:06 PM</td><td>6:36 PM</td></tr>
+          <tr><td>Eiwa St (Civic Center)</td><td>12:57 PM</td><td>5:12 PM</td><td>6:42 PM</td></tr>
+          <tr><td>Across Fish Express</td><td>1:03 PM</td><td>5:18 PM</td><td>6:48 PM</td></tr>
+          <tr><td>Kūhiō Hwy / Laukona Rd</td><td>1:06 PM</td><td>5:21 PM</td><td>6:51 PM</td></tr>
+          <tr><td>Peter Rayno Park</td><td>1:08 PM</td><td>5:23 PM</td><td>6:53 PM</td></tr>
+          <tr><td>Wailua Homesteads Park</td><td>1:23 PM</td><td>5:38 PM</td><td>7:08 PM</td></tr>
+          <tr><td>Wailua Houselots Park</td><td>1:34 PM</td><td>5:49 PM</td><td>7:19 PM</td></tr>
+          <tr><td>Courtyards at Waipouli</td><td>1:40 PM</td><td>5:55 PM</td><td>7:25 PM</td></tr>
+          <tr class="highlight-stop"><td>Kapaʻa Skate Park</td><td>1:45 PM</td><td>6:00 PM</td><td>7:30 PM</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">Mon–Fri ONLY — no weekend service · Effective February 2024</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ROUTE 900/950: EXPRESS WAIMEA ↔ ANAHOLA
+══════════════════════════════════════════════ -->
+<div class="route-panel" data-type="express">
+  <div class="panel-header">
+    <div class="route-badge" style="background:linear-gradient(135deg,#B45309,#d97706)">
+      <span class="badge-num">900</span>
+      <span class="badge-sub">/950</span>
+    </div>
+    <div class="panel-title">
+      <h3>Express: Anahola ↔ Waimea</h3>
+      <div class="route-sub" style="color:#B45309">Express · Island-wide · Anahola → Kapaʻa → Līhuʻe → Eleele → Waimea · Mon–Fri only</div>
+    </div>
+    <div class="panel-meta">
+      <span class="tag tag-red">Mon–Fri Only</span>
+      <span class="tag" style="background:#FEF3E2;color:#B45309">4 trips/dir</span>
+    </div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="panel-body">
+    <div class="stops-strip">
+      <span class="stop-em">Across Kukuihale Rd (Anahola)</span><span class="stop-arrow">→</span>
+      <span>Kapaʻa</span><span class="stop-arrow">→</span>
+      <span>Wailuā</span><span class="stop-arrow">→</span>
+      <span>Airport</span><span class="stop-arrow">→</span>
+      <span>Kukui Grove</span><span class="stop-arrow">→</span>
+      <span>Lawai</span><span class="stop-arrow">→</span>
+      <span>Eleele</span><span class="stop-arrow">→</span>
+      <span>Waimea</span><span class="stop-arrow">→</span>
+      <span class="stop-em">Waimea Athletic Field</span>
+    </div>
+    <div class="schedule-wrap">
+      <table>
+        <thead><tr>
+          <th>Stop (Route 900 — Anahola→Waimea)</th>
+          <th>Trip 1</th><th>Trip 2</th><th>Trip 3</th><th>Trip 4</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-stop"><td>Across Kukuihale Rd (Anahola)</td><td>5:20</td><td>9:20</td><td>1:20</td><td>5:20</td></tr>
+          <tr><td>Across Kealia Beach</td><td>5:24</td><td>9:24</td><td>1:24</td><td>5:24</td></tr>
+          <tr><td>Across Kapaʻa Neighborhood Ctr</td><td>5:29</td><td>9:29</td><td>1:29</td><td>5:29</td></tr>
+          <tr><td>Kapaʻa Skate Park</td><td>5:32</td><td>9:32</td><td>1:32</td><td>5:32</td></tr>
+          <tr><td>Kapaʻa Big Save</td><td>5:35</td><td>9:35</td><td>1:35</td><td>5:35</td></tr>
+          <tr><td>Kūhiō Hwy / Hoi Rd</td><td>5:36</td><td>9:36</td><td>1:36</td><td>5:36</td></tr>
+          <tr><td>Kūhiō Hwy / Haleilio Rd</td><td>5:39</td><td>9:39</td><td>1:39</td><td>5:39</td></tr>
+          <tr><td>Līhuʻe Airport Baggage Claim A</td><td>5:53</td><td>9:53</td><td>1:53</td><td>5:53</td></tr>
+          <tr><td>Līhuʻe Airport Baggage Claim B</td><td>5:55</td><td>9:55</td><td>1:55</td><td>5:55</td></tr>
+          <tr><td>Garden Island Inn</td><td>6:01</td><td>10:01</td><td>2:01</td><td>6:01</td></tr>
+          <tr><td>Kukui Grove – First Hawaiian Bank</td><td>6:06</td><td>10:06</td><td>2:06</td><td>6:06</td></tr>
+          <tr><td>Kaumaluaʻii Hwy – KCC</td><td>6:09</td><td>10:09</td><td>2:09</td><td>6:09</td></tr>
+          <tr><td>Lāwaʻi Post Office</td><td>6:10</td><td>10:10</td><td>2:10</td><td>6:10</td></tr>
+          <tr><td>Eleele Nani</td><td>6:23</td><td>10:23</td><td>2:23</td><td>6:23</td></tr>
+          <tr><td>Westside Pharmacy</td><td>6:33</td><td>10:33</td><td>2:33</td><td>6:33</td></tr>
+          <tr><td>Mariko Store</td><td>6:36</td><td>10:36</td><td>2:36</td><td>6:36</td></tr>
+          <tr><td>Waimea First Hawaiian Bank</td><td>6:37</td><td>10:37</td><td>2:37</td><td>6:37</td></tr>
+          <tr class="highlight-stop"><td>Waimea Athletic Field</td><td>6:48</td><td>10:48</td><td>2:48</td><td>6:48</td></tr>
+          <tr><td>Hokulei Village – Nuhou</td><td>6:50</td><td>10:50</td><td>2:50</td><td>6:50</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-footer">
+      <span class="note">⚠️ Mon–Fri ONLY — No Saturday or Sunday service · Effective January 2026</span>
+      <a class="pdf-link" href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">Official PDF ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- INFO GRID -->
+<div class="section-label" style="margin-top:2.5rem">Rider Info</div>
+<div class="info-grid">
+  <div class="info-card">
+    <span class="info-icon">🕐</span>
+    <h4>Service Hours</h4>
+    <ul>
+      <li>Monday–Saturday on all routes</li>
+      <li>No Sunday service on any route</li>
+      <li>Routes 800/850 &amp; 900/950: Mon–Fri only</li>
+      <li>No service on major holidays</li>
+    </ul>
+  </div>
+  <div class="info-card">
+    <span class="info-icon">🎟</span>
+    <h4>Fares</h4>
+    <ul>
+      <li>General: <strong>$2.00</strong> per ride</li>
+      <li>Reduced: <strong>$1.00</strong> (seniors 60+, disabled, youth)</li>
+      <li>Exact change only — no refunds</li>
+      <li>Day &amp; monthly passes available</li>
+    </ul>
+  </div>
+  <div class="info-card">
+    <span class="info-icon">♿</span>
+    <h4>Accessibility</h4>
+    <ul>
+      <li>All buses are lift-equipped</li>
+      <li>Wheelchair: up to 53"L × 33"W × 800 lbs</li>
+      <li>Bike racks on every vehicle</li>
+      <li>Air conditioned for comfort</li>
+    </ul>
+  </div>
+  <div class="info-card">
+    <span class="info-icon">📞</span>
+    <h4>Contact</h4>
+    <ul>
+      <li>3220 Hoʻolako St, Līhuʻe</li>
+      <li>(808) 246-8110</li>
+      <li><a href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank" rel="noopener" style="color:var(--ocean)">kauai.gov ↗</a></li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ══════════════════════════════════════════
+     MAP PANEL
+══════════════════════════════════════════ -->
+<div id="map-panel">
+  <div id="map-controls">
+    <span class="map-filter-label">Routes:</span>
+    <button class="map-route-btn active" data-route="all" onclick="filterMapRoute('all',this)">
+      <span class="dot" style="background:#555"></span>All
+    </button>
+    <button class="map-route-btn" data-route="30" onclick="filterMapRoute('30',this)">
+      <span class="dot" style="background:#0E7490"></span>30 Kōloa
+    </button>
+    <button class="map-route-btn" data-route="60" onclick="filterMapRoute('60',this)">
+      <span class="dot" style="background:#5C7C3A"></span>60 Kapahi
+    </button>
+    <button class="map-route-btn" data-route="70" onclick="filterMapRoute('70',this)">
+      <span class="dot" style="background:#D94F3D"></span>70 Līhuʻe
+    </button>
+    <button class="map-route-btn" data-route="100" onclick="filterMapRoute('100',this)">
+      <span class="dot" style="background:#006B8F"></span>100 Kekaha→LIH
+    </button>
+    <button class="map-route-btn" data-route="200" onclick="filterMapRoute('200',this)">
+      <span class="dot" style="background:#005f7a"></span>200 LIH→Kekaha
+    </button>
+    <button class="map-route-btn" data-route="400" onclick="filterMapRoute('400',this)">
+      <span class="dot" style="background:#2d6e38"></span>400 Hanalei→KCC
+    </button>
+    <button class="map-route-btn" data-route="500" onclick="filterMapRoute('500',this)">
+      <span class="dot" style="background:#1a5c2e"></span>500 LIH→Hanalei
+    </button>
+    <button class="map-route-btn" data-route="900" onclick="filterMapRoute('900',this)">
+      <span class="dot" style="background:#6B21A8"></span>900 Express
+    </button>
+    <button class="map-route-btn" data-route="950" onclick="filterMapRoute('950',this)">
+      <span class="dot" style="background:#9333EA"></span>950 Express
+    </button>
+  </div>
+  <div id="leaflet-map"></div>
+</div>
+
+<footer class="site-footer">
+  Schedule data from official Kauaʻi County PDFs, effective February 2024 (Routes 900/950 updated January 2026) · Subject to change without notice · Verify at <a href="https://www.kauai.gov/Government/Departments-Agencies/Transportation/Bus-Schedules" target="_blank">kauai.gov</a> · Part of <strong>KauaiConnect</strong>
+</footer>
+
+<script>
+  function togglePanel(header) {
+    const body = header.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    header.classList.toggle('open', !isOpen);
+    body.classList.toggle('open', !isOpen);
+  }
+
+  function filterRoutes(type, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.route-panel').forEach(p => {
+      if (type === 'all' || p.dataset.type === type) {
+        p.classList.remove('hidden');
+      } else {
+        p.classList.add('hidden');
+      }
+    });
+  }
+
+  // ── CURRENT-TIME COLUMN HIGHLIGHTING ──────────────────────────────
+
+  function getHSTMinutes() {
+    const now = new Date();
+    const hst = new Date(now.getTime() - 10 * 3600000);
+    return hst.getUTCHours() * 60 + hst.getUTCMinutes();
+  }
+
+  // Parse a time string to raw minutes. Resolves AM/PM if present.
+  function parseRaw(str) {
+    if (!str) return null;
+    str = str.trim();
+    if (!str || str === '—' || str === '-') return null;
+    const hasPM = /pm/i.test(str);
+    const hasAM = /am/i.test(str);
+    const parts = str.replace(/[apm\s]/gi, '').split(':');
+    if (parts.length < 2) return null;
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    if (hasPM && h !== 12) h += 12;
+    if (hasAM && h === 12) h = 0;
+    return h * 60 + m;
+  }
+
+  function highlightTable(table) {
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const headerCells = Array.from(table.querySelectorAll('thead th'));
+    if (!rows.length || headerCells.length < 2) return;
+
+    const numCols = headerCells.length - 1;
+    const nowMins = getHSTMinutes();
+    const hasAMPM = /[ap]m/i.test(table.textContent);
+
+    // Tag origCol on very first run BEFORE any DOM reordering, so we can
+    // always look up cells by their original schedule column index.
+    const thead = table.querySelector('thead tr');
+    const timeThs = Array.from(thead.querySelectorAll('th')).slice(1);
+    if (!table.dataset.origOrder) {
+      timeThs.forEach((th, ci) => { th.dataset.origCol = ci; });
+      rows.forEach(row => {
+        Array.from(row.querySelectorAll('td')).slice(1).forEach((td, ci) => { td.dataset.origCol = ci; });
+      });
+      table.dataset.origOrder = '1';
+    }
+
+    // Get the first data row's raw values per ORIGINAL column (not DOM order).
+    const firstRowTds = Array.from(rows[0].querySelectorAll('td[data-orig-col]'));
+    const rawFirstRow = new Array(numCols).fill(null);
+    firstRowTds.forEach(td => {
+      const ci = parseInt(td.dataset.origCol, 10);
+      if (ci < numCols) rawFirstRow[ci] = parseRaw(td.textContent);
+    });
+
+    // Resolve each column's departure to true 24h minutes.
+    // For bare times (no AM/PM), walk LEFT TO RIGHT across original columns.
+    // When a value drops below the previous, we've crossed a 12h boundary — add 12h offset.
+    // e.g. 6:05 7:05 ... 12:05 1:05 2:05 ... 7:05 8:05  =>  correctly becomes 20:05
+    const colFirstMins = new Array(numCols).fill(null);
+    if (hasAMPM) {
+      rawFirstRow.forEach((m, ci) => { colFirstMins[ci] = m; });
+    } else {
+      let offset = 0;
+      let prev = null;
+      for (let ci = 0; ci < numCols; ci++) {
+        const m = rawFirstRow[ci];
+        if (m === null) { colFirstMins[ci] = null; continue; }
+        if (prev !== null && (m + offset) < prev) {
+          offset += 12 * 60;
+        }
+        colFirstMins[ci] = m + offset;
+        prev = m + offset;
+      }
+    }
+
+    // Find the next upcoming trip (first original column >= now)
+    let nextCol = -1;
+    for (let ci = 0; ci < numCols; ci++) {
+      if (colFirstMins[ci] !== null && colFirstMins[ci] >= nowMins) {
+        nextCol = ci; break;
+      }
+    }
+    // All departed — show the last column
+    if (nextCol === -1) {
+      for (let ci = numCols - 1; ci >= 0; ci--) {
+        if (colFirstMins[ci] !== null) { nextCol = ci; break; }
+      }
+    }
+    if (nextCol === -1) return;
+
+    // Build new column order: nextCol first, then wrap
+    const colOrder = [];
+    for (let i = 0; i < numCols; i++) colOrder.push((nextCol + i) % numCols);
+
+    // Reorder header cells using origCol lookup
+    const thByOrig = {};
+    Array.from(thead.querySelectorAll('th[data-orig-col]')).forEach(th => { thByOrig[th.dataset.origCol] = th; });
+    colOrder.forEach(ci => {
+      const th = thByOrig[ci];
+      if (!th) return;
+      th.classList.remove('col-next', 'col-past');
+      if (ci === nextCol) th.classList.add('col-next');
+      else if (colFirstMins[ci] !== null && colFirstMins[ci] < nowMins) th.classList.add('col-past');
+      thead.appendChild(th);
+    });
+
+    // Reorder body cells
+    rows.forEach(row => {
+      const tdByOrig = {};
+      Array.from(row.querySelectorAll('td[data-orig-col]')).forEach(td => { tdByOrig[td.dataset.origCol] = td; });
+      colOrder.forEach(ci => {
+        const td = tdByOrig[ci];
+        if (!td) return;
+        td.classList.remove('col-next', 'col-past');
+        if (ci === nextCol) td.classList.add('col-next');
+        else if (colFirstMins[ci] !== null && colFirstMins[ci] < nowMins) td.classList.add('col-past');
+        row.appendChild(td);
+      });
+    });
+  }
+
+  function highlightAllTables() {
+    document.querySelectorAll('table').forEach(highlightTable);
+  }
+
+  // Event delegation on document — works regardless of when WordPress
+  // executes this script relative to the DOM.
+  document.addEventListener('click', (e) => {
+    const header = e.target.closest('.panel-header');
+    if (header) {
+      togglePanel(header);
+      setTimeout(highlightAllTables, 50);
+      return;
+    }
+    const btn = e.target.closest('.filter-btn[data-filter]');
+    if (btn) {
+      filterRoutes(btn.dataset.filter, btn);
+    }
+  });
+
+  function init() {
+    highlightAllTables();
+    setInterval(highlightAllTables, 60000);
+  }
+
+  // Run init whether DOMContentLoaded has already fired or not
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+<script>
+// ── MAP DATA ─────────────────────────────────────────────────────────────────
+// Each stop: [name, lat, lng, routes[], scheduleNote]
+// Routes: 30, 60, 70, 100, 200, 400, 500, 900, 950
+var ROUTE_COLORS = {
+  '30':  '#0E7490',
+  '60':  '#5C7C3A',
+  '70':  '#D94F3D',
+  '100': '#006B8F',
+  '200': '#005f7a',
+  '400': '#2d6e38',
+  '500': '#1a5c2e',
+  '900': '#6B21A8',
+  '950': '#9333EA',
+};
+
+var ROUTE_NAMES = {
+  '30':  'Kōloa/Poipū Shuttle',
+  '60':  'Kapahi Shuttle',
+  '70':  'Līhuʻe Shuttle',
+  '100': 'Kekaha → Līhuʻe',
+  '200': 'Līhuʻe → Kekaha',
+  '400': 'Hanalei → KCC',
+  '500': 'LIH → Hanalei',
+  '900': 'Northside Express',
+  '950': 'Southside Express',
+};
+
+// Stop database: [stopName, lat, lng, [routeNums]]
+// Coordinates from official Kaua'i Bus GTFS feed
+var STOPS = [
+  ['Hanalei Neighborhood Center', 22.201771, -159.500807, ['400','500']],
+  ['Hanalei Center', 22.20301, -159.495857, ['400']],
+  ['Hanalei Post Office', 22.20273, -159.497519, ['500']],
+  ['Princeville Shopping Center', 22.213158, -159.474088, ['500']],
+  ['Across Princeville Library', 22.213077, -159.473033, ['400']],
+  ['Kilauea Gym', 22.211598, -159.406168, ['400','500']],
+  ['Anaina Hou', 22.210472, -159.415306, ['400','500']],
+  ['Kilauea Food Mart', 22.207324, -159.411826, ['500']],
+  ['Across Kilauea Food Mart', 22.206925, -159.411908, ['400']],
+  ['Moloaa Fruit Stand', 22.179621, -159.330999, ['400','500']],
+  ['Across Anahola Post Office', 22.144802, -159.315134, ['400']],
+  ['Anahola Post Office', 22.144495, -159.314836, ['500']],
+  ['Kukuihale Rd (500)', 22.138008, -159.305271, ['500','950']],
+  ['Across Kukuihale Rd', 22.137815, -159.305346, ['400','900']],
+  ['Kapahi Park', 22.09972, -159.347063, ['60']],
+  ['Across Kapahi Food Mart', 22.098845, -159.334037, ['60']],
+  ['Kealia Beach', 22.098661, -159.305508, ['500','950']],
+  ['Kapahi Food Mart', 22.098608, -159.333842, ['60']],
+  ['Across Kealia Beach', 22.098076, -159.305927, ['400','900']],
+  ['Kawaihau Rd / Kahana Rd', 22.095799, -159.327202, ['60']],
+  ['Kawaihau Rd / Malakia Rd', 22.094384, -159.321465, ['60']],
+  ['Kapaa High School', 22.090713, -159.314747, ['60']],
+  ['Across Kapaa High School', 22.090446, -159.314684, ['60']],
+  ['Mahelona Hospital', 22.087774, -159.314111, ['60']],
+  ['Across Mahelona Hospital', 22.087896, -159.314204, ['60']],
+  ['Friendship House', 22.084086, -159.311493, ['60']],
+  ['Kapaa Neighborhood Center', 22.079781, -159.314284, ['500','60','950']],
+  ['Across Kapaa Neighborhood Center', 22.079692, -159.314512, ['400','60','900']],
+  ['Kapaa Middle School', 22.078935, -159.327108, ['60']],
+  ['Kapaa Library', 22.077746, -159.316245, ['500','60','950']],
+  ['Kapaa Skate Park', 22.07694, -159.321853, ['400','500','60','900','950']],
+  ['Pono Kai', 22.073579, -159.319134, ['500','950']],
+  ['Kapaa Hongwanji', 22.070617, -159.319442, ['500','950']],
+  ['Kapaa Big Save', 22.068886, -159.31951, ['400','900']],
+  ['Kuhio Hwy / Hoi Rd', 22.06388, -159.319723, ['400','900']],
+  ['Waipouli Beach Resort', 22.061844, -159.320359, ['500','950']],
+  ['Waipouli Courtyards', 22.05305, -159.332398, ['500','950']],
+  ['Kuhio Hwy / Haleilio Rd', 22.052215, -159.333505, ['400','900']],
+  ['Kalepa Village', 21.99586, -159.352985, ['200','400']],
+  ['Peter Rayno Park', 21.995761, -159.352763, ['100','500']],
+  ['Kuhio Hwy / Laukona Rd (200)', 21.993616, -159.356917, ['200','400']],
+  ['Kuhio Hwy / Laukona Rd (100)', 21.993368, -159.357157, ['100','500']],
+  ['Wilcox Hospital', 21.985181, -159.365951, ['70']],
+  ['Lihue Neighborhood Center', 21.984929, -159.368919, ['70']],
+  ['Across Fish Express', 21.984351, -159.366664, ['100','500','70']],
+  ['Walmart', 21.983148, -159.365254, ['70']],
+  ['Kuhio Medical Center', 21.982759, -159.36727, ['200','400','70']],
+  ['Lihue Airport Baggage Claim B', 21.979138, -159.348236, ['100','200','900','950']],
+  ['Lihue Gardens', 21.977659, -159.369932, ['70']],
+  ['Lihue Airport Baggage Claim A', 21.977317, -159.350186, ['100','200','900','950']],
+  ['Lihue Courthouse', 21.976616, -159.354358, ['100','200']],
+  ['Eiwa Street', 21.976089, -159.367652, ['200','400']],
+  ['Eiwa St (100/500)', 21.975447, -159.367852, ['100','500']],
+  ['Rice St / Umi St', 21.973221, -159.36584, ['70']],
+  ['Elepaio Rd / Akialoa Rd', 21.973391, -159.721686, ['100']],
+  ['Elepaio / Akialoa', 21.97346, -159.721515, ['200']],
+  ['Elepaio Rd / Akekeke Rd', 21.971563, -159.719832, ['100']],
+  ['Elepaio / Akekeke', 21.97154, -159.719643, ['200']],
+  ['HMSA (Kukui Grove area)', 21.971453, -159.377105, ['70']],
+  ['Hokulei Village - Kaumualii Hwy', 21.970159, -159.385867, ['100','500','950']],
+  ['Kekaha Neighborhood Center', 21.970066, -159.717549, ['100']],
+  ['Across Kekaha NC', 21.970104, -159.717436, ['200']],
+  ['Kukui Grove - First Hawaiian Bank', 21.96999, -159.38056, ['100','200','400','500','70','900','950']],
+  ['Hokulei Village - Nuhou Rd', 21.968995, -159.388021, ['200','400','900']],
+  ['Kekaha Elderly Center', 21.96905, -159.71579, ['200']],
+  ['Across Kekaha Elderly', 21.969013, -159.715913, ['100']],
+  ['KCC Performing Arts Center', 21.968387, -159.396927, ['100','200','400','500']],
+  ['Target', 21.968221, -159.376381, ['70']],
+  ['Kaumualii Hwy - KCC (200)', 21.96767, -159.394486, ['200','400','900']],
+  ['Kaumualii Hwy - Across KCC (100)', 21.967331, -159.394469, ['100','500','950']],
+  ['Elepaio Rd / Io Rd', 21.96827, -159.71477, ['100']],
+  ['Elepaio / Io', 21.968343, -159.714733, ['200']],
+  ['Elepaio Rd / Iwa Rd', 21.96593, -159.71117, ['100','200']],
+  ['Methodist Church', 21.963426, -159.707238, ['200']],
+  ['Elepaio Rd / Pueo Rd', 21.963163, -159.707044, ['100']],
+  ['Old Kekaha Store', 21.96331, -159.7029, ['100']],
+  ['Kauai Veterans Memorial Hospital', 21.96091, -159.67124, ['100','200']],
+  ['Kauai High School', 21.959271, -159.360252, ['70']],
+  ['Across Garden Island Inn', 21.959135, -159.35353, ['70','950']],
+  ['Waimea Athletic Field', 21.958708, -159.674048, ['100','200','900','950']],
+  ['Garden Island Inn', 21.958856, -159.353736, ['70','900']],
+  ['Waimea Neighborhood Center', 21.957694, -159.670613, ['100','200']],
+  ['Waimea First Hawaiian Bank', 21.954443, -159.66654, ['200','900']],
+  ['Ishihara Market', 21.95434, -159.66666, ['100','950']],
+  ['Makaweli Post Office', 21.934908, -159.644082, ['100','200']],
+  ['Kalaheo Post Office', 21.92501, -159.527386, ['100']],
+  ['Kalaheo Neighborhood Center', 21.925023, -159.527207, ['200','30']],
+  ['Brydeswood', 21.923605, -159.535766, ['30']],
+  ['Lawai Post Office', 21.923237, -159.501301, ['200','900']],
+  ['Across Lawai Post Office', 21.923095, -159.500927, ['100','30','950']],
+  ['Puu Rd / Hokua Rd', 21.922919, -159.522967, ['100','200']],
+  ['Koloa Rd / Horita Rd', 21.918092, -159.498174, ['30']],
+  ['Kaumakani Thrifty Mart', 21.916498, -159.617345, ['100','200']],
+  ['Westside Pharmacy', 21.909384, -159.587624, ['200','900']],
+  ['Hanapepe First United Church', 21.9092, -159.5883, ['100','950']],
+  ['Eleele Nani (Mahea Rd)', 21.908858, -159.579152, ['100','950']],
+  ['Eleele Nani', 21.908422, -159.579698, ['200','900']],
+  ['Mariko Store', 21.908078, -159.594991, ['200','900']],
+  ['Hanapepe Armory', 21.908012, -159.594447, ['100','950']],
+  ['Koloa Post Office', 21.905033, -159.463832, ['30']],
+  ['Koloa Neighborhood Center', 21.903631, -159.463882, ['30']],
+  ['Koloa Telephone Exchange', 21.903527, -159.466857, ['30']],
+  ['Kealaula Eleele', 21.903355, -159.586057, ['100','200']],
+  ['Koloa School', 21.898617, -159.466188, ['30']],
+  ['Kukuiula Store', 21.884075, -159.468037, ['30']],
+  ['Poipu Rd / Kiahuna Drive', 21.878758, -159.460743, ['30']],
+  ['Poipu Rd / Hoowili Rd', 21.876763, -159.454087, ['30']],
+  ['Poipu Bypass', 21.876408, -159.446009, ['30']],
+  ['Rice St / Hoolako St', 21.969131, -159.360073, ['70']],
+  ['Rice St / Hardy St', 21.970564, -159.362376, ['70']],
+  ['Rice St / Ewalu St', 21.973091, -159.365898, ['70']],
+  ['Rice St / Kalena St', 21.970498, -159.362494, ['70']],
+];
+</script>
+
+<script>
+(function () {
+  var map = null, markers = [], activeRoute = 'all', mapInitialized = false;
+
+  function loadLeaflet(cb, fail) {
+    if (window.L && L.map) return cb();
+    var urls = [
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    ];
+    (function next(i) {
+      if (i >= urls.length) return fail();
+      var s = document.createElement('script');
+      s.src = urls[i];
+      s.onload = function () { (window.L && L.map) ? cb() : next(i + 1); };
+      s.onerror = function () { next(i + 1); };
+      document.head.appendChild(s);
+    })(0);
+  }
+
+  function showError(msg) {
+    document.getElementById('leaflet-map').innerHTML =
+      '<div style="padding:2rem;font-family:sans-serif;color:#595959">' + msg + '</div>';
+  }
+
+  function initMap() {
+    if (mapInitialized) { if (map) map.invalidateSize(); return; }
+    loadLeaflet(function () {
+      try {
+        mapInitialized = true;
+        map = L.map('leaflet-map', { center: [22.05, -159.50], zoom: 11 });
+        var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }).addTo(map);
+        var errs = 0;
+        osm.on('tileerror', function () {
+          if (++errs === 3) {
+            map.removeLayer(osm);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+              attribution: 'Tiles &copy; Esri', maxZoom: 19
+            }).addTo(map);
+          }
+        });
+        buildMarkers();
+        map.invalidateSize();
+      } catch (e) {
+        mapInitialized = false;
+        showError('Map failed to load: ' + e.message);
+        console.error(e);
+      }
+    }, function () {
+      showError('Could not load the map library. Check your connection or any script-blocking plugin.');
+    });
+  }
+
+  function buildMarkers() {
+    markers.forEach(function (m) { m.remove(); });
+    markers = [];
+    var visible = STOPS.filter(function (s) {
+      return activeRoute === 'all' || s[3].indexOf(activeRoute) !== -1;
+    });
+    var seen = {};
+    visible.forEach(function (stop) {
+      var key = stop[1] + ',' + stop[2];
+      if (!seen[key]) {
+        seen[key] = { name: stop[0], lat: stop[1], lng: stop[2], routes: stop[3].slice(), note: stop[4] };
+      } else {
+        stop[3].forEach(function (r) {
+          if (seen[key].routes.indexOf(r) === -1) seen[key].routes.push(r);
+        });
+      }
+    });
+    Object.keys(seen).forEach(function (k) {
+      var stop = seen[k], routes = stop.routes;
+      var primary = (activeRoute !== 'all') ? activeRoute : routes[0];
+      var color = ROUTE_COLORS[primary] || '#555';
+      var second = routes.length > 1 ? (ROUTE_COLORS[routes[1]] || color) : color;
+      var circleHtml;
+      if (routes.length === 1 || activeRoute !== 'all') {
+        circleHtml = '<div style="width:13px;height:13px;border-radius:50%;background:' + color +
+          ';border:2.5px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);"></div>';
+      } else {
+        circleHtml = '<div style="width:13px;height:13px;border-radius:50%;border:2.5px solid white;' +
+          'box-shadow:0 1px 6px rgba(0,0,0,0.4);overflow:hidden;position:relative;background:' + second +
+          ';"><div style="position:absolute;left:0;top:0;width:50%;height:100%;background:' + color + ';"></div></div>';
+      }
+      var icon = L.divIcon({ className: '', html: circleHtml, iconSize: [13, 13], iconAnchor: [6, 6], popupAnchor: [0, -10] });
+      var badges = routes.map(function (r) {
+        return '<span class="rbadge" style="background:' + (ROUTE_COLORS[r] || '#555') + '">' + r + '</span>';
+      }).join('');
+      var lines = routes.map(function (r) {
+        return '<div style="font-size:0.72rem;color:#595959;margin-bottom:2px">Rte ' + r + ': ' + (ROUTE_NAMES[r] || '') + '</div>';
+      }).join('');
+      var popup = '<div class="bus-popup"><h4>' + stop.name + '</h4>' +
+        '<div class="route-badges">' + badges + '</div>' + lines +
+        (stop.note ? '<div style="font-size:0.7rem;color:#7A7A7A;margin-top:4px;font-style:italic">' + stop.note + '</div>' : '') +
+        '</div>';
+      markers.push(L.marker([stop.lat, stop.lng], { icon: icon }).addTo(map).bindPopup(popup, { maxWidth: 260, minWidth: 200 }));
+    });
+  }
+
+  function filterMapRoute(route, btn) {
+    activeRoute = route;
+    document.querySelectorAll('.map-route-btn').forEach(function (b) {
+      b.classList.remove('active');
+      b.style.background = ''; b.style.borderColor = ''; b.style.color = '';
+    });
+    btn.classList.add('active');
+    if (route !== 'all' && ROUTE_COLORS[route]) {
+      btn.style.background = ROUTE_COLORS[route];
+      btn.style.borderColor = ROUTE_COLORS[route];
+      btn.style.color = 'white';
+    }
+    if (!map) return;
+    buildMarkers();
+    if (route !== 'all') {
+      var stops = STOPS.filter(function (s) { return s[3].indexOf(route) !== -1; });
+      if (stops.length) {
+        var lats = stops.map(function (s) { return s[1]; });
+        var lngs = stops.map(function (s) { return s[2]; });
+        map.fitBounds(L.latLngBounds(
+          [Math.min.apply(null, lats) - 0.01, Math.min.apply(null, lngs) - 0.01],
+          [Math.max.apply(null, lats) + 0.01, Math.max.apply(null, lngs) + 0.01]
+        ), { padding: [30, 30] });
+      }
+    } else {
+      map.setView([22.05, -159.50], 11);
+    }
+  }
+
+  function toggleMap() {
+    var panel = document.getElementById('map-panel');
+    var btn = document.getElementById('map-toggle-btn');
+    var open = panel.classList.toggle('visible');
+    btn.classList.toggle('active', open);
+    btn.textContent = open ? '✕ Close Map' : '🗺 Map';
+    if (open) setTimeout(initMap, 50);
+  }
+
+  window.toggleMap = toggleMap;
+  window.filterMapRoute = filterMapRoute;
+})();
+</script>
+<!-- ═══ Kauaʻi Bus map: "next departure" highlight ═══
+     Paste this whole block just before </body> in the bus app HTML (after the map <script>).
+     It reads the timetables already on the page and the STOPS list, then pulses the stops
+     that have a SCHEDULED departure in the next 15 minutes. It is NOT live GPS.
+     Test any time of day with:  ?kcnow=14:05  on the page URL (Hawaiʻi time, Mon–Sat). -->
+<style>
+  .kc-due::after {
+    content: ""; position: absolute; left: -7px; top: -7px; width: 27px; height: 27px;
+    box-sizing: border-box; border-radius: 50%; border: 3px solid #F59E0B;
+    pointer-events: none; animation: kc-pulse 1.8s ease-out infinite;
+  }
+  .kc-due.kc-soon::after { border-color: #16A34A; }
+  @keyframes kc-pulse { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+  .kc-done { opacity: .35; }
+  .kc-status { background: #fff; padding: 7px 10px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,.3);
+    font: 12px/1.45 system-ui, sans-serif; color: #333; max-width: 240px; }
+  .kc-status b { font-weight: 600; }
+  .kc-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid; vertical-align: -1px; margin-right: 4px; }
+  .kc-next { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e5e5; font-size: .78rem; color: #333; }
+  .kc-next div { margin-bottom: 2px; }
+  @media (prefers-reduced-motion: reduce) { .kc-due::after { animation: none; } }
+</style>
+<script>
+(function () {
+  var WINDOW = 15;   // minutes ahead that count as "due soon" (amber ring)
+  var SOON = 5;      // minutes ahead that count as "arriving" (green ring)
+
+  // Table stop name -> map stop name, for names that differ too much to match automatically.
+  // Keys are matched after normalising (case, accents, ʻ okina, punctuation, parentheses ignored).
+  var ALIASES = {
+    'Līhuʻe Airport A': 'Lihue Airport Baggage Claim A',
+    'Līhuʻe Airport B': 'Lihue Airport Baggage Claim B',
+    'KVMH Foyer': 'Kauai Veterans Memorial Hospital',
+    'Kukui Grove': 'Kukui Grove - First Hawaiian Bank',
+    'Kukui Grove – HMSA Bldg': 'HMSA (Kukui Grove area)',
+    'Kekaha Elderly Housing': 'Kekaha Elderly Center',
+    'Courtyards at Waipouli': 'Waipouli Courtyards',
+    'Kapaʻa Hongwanji Mission': 'Kapaa Hongwanji',
+    'Kūhiō Hwy / Kukuihale Rd': 'Kukuihale Rd (500)',
+    'Eiwa St (Civic Center)': 'Eiwa Street',            // route 70 stop is on Eiwa St; the map has no separate dot for it
+    'Eiwa St / Civic Center (return)': 'Eiwa Street'
+  };
+
+  // ── time helpers (Hawaiʻi time, no DST) ──────────────────────────────────
+  var qs = /[?&]kcnow=(\d{1,2}):(\d{2})/.exec(location.search);
+  if (qs) window.KC_NOW = { day: 6, mins: (+qs[1]) * 60 + (+qs[2]) };
+  function hst() {
+    if (window.KC_NOW) return window.KC_NOW;
+    var parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Pacific/Honolulu', weekday: 'short',
+      hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
+    var o = {}; parts.forEach(function (p) { o[p.type] = p.value; });
+    var days = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return { day: days[o.weekday], mins: (+o.hour % 24) * 60 + (+o.minute) };
+  }
+  function fmt(m) {
+    var h = Math.floor(m / 60) % 24, mm = m % 60, ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12; return h + ':' + (mm < 10 ? '0' : '') + mm + ' ' + ap;
+  }
+  function away(d) {
+    if (d <= 1) return 'due now';
+    if (d < 60) return 'in ' + d + ' min';
+    return 'in ' + Math.floor(d / 60) + ' h ' + (d % 60) + ' min';
+  }
+
+  // ── name matching ────────────────────────────────────────────────────────
+  function key(s) {
+    return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[ʻ‘’'`]/g, '')
+      .toLowerCase().replace(/\([^)]*\)/g, ' ')
+      .replace(/\bn-?hood\b/g, 'neighborhood').replace(/[–—\-\/&↔→]/g, ' ')
+      .replace(/\bctr\b/g, 'center').replace(/\bnc\b/g, 'neighborhood center')
+      .replace(/\bhwn\b/g, 'hawaiian').replace(/\b1st\b/g, 'first')
+      .replace(/\b(street|st|road|rd|drive|dr|highway|hwy)\b/g, ' ')   // St / Rd / Dr / Hwy differ between table and map
+      .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function lev(a, b) {
+    var p = [], i, j;
+    for (j = 0; j <= b.length; j++) p[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      var prev = p[0]; p[0] = i;
+      for (j = 1; j <= b.length; j++) {
+        var t = p[j];
+        p[j] = Math.min(p[j] + 1, p[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = t;
+      }
+    }
+    return p[b.length];
+  }
+  function score(a, b) {
+    if (a === b) return 1;
+    var sim = 1 - lev(a, b) / Math.max(a.length, b.length);
+    var ta = a.split(' '), tb = b.split(' ');
+    var inter = ta.filter(function (x) { return tb.indexOf(x) > -1; }).length;
+    var jac = inter / (ta.length + tb.length - inter);
+    var s = Math.max(sim, jac);
+    if ((ta[0] === 'across') !== (tb[0] === 'across')) s -= 0.15;
+    return s;
+  }
+
+  var STOPK = null;
+  function stopIndex() {
+    if (!STOPK) STOPK = (window.STOPS || []).map(function (s) { return { s: s, k: key(s[0]), pos: s[1] + ',' + s[2] }; });
+    return STOPK;
+  }
+  function matchStop(name, routes) {
+    var k = key(name), idx = stopIndex();
+    var cands = idx.filter(function (e) { return e.s[3].some(function (r) { return routes.indexOf(r) > -1; }); });
+    var strict = !cands.length;   // e.g. routes 800/850 have no stops on the map yet
+    if (strict) cands = idx;
+    var best = null, bs = 0;
+    cands.forEach(function (e) { var sc = score(k, e.k); if (sc > bs) { bs = sc; best = e; } });
+    if (bs >= (strict ? 0.85 : 0.7)) return { e: best, sc: bs };
+    // no good automatic match: fall back to the alias list
+    for (var an in ALIASES) if (key(an) === k) {
+      var a = key(ALIASES[an]);
+      for (var i = 0; i < idx.length; i++) if (idx[i].k === a) return { e: idx[i], sc: 1 };
+    }
+    return null;
+  }
+
+  // ── read the timetables ──────────────────────────────────────────────────
+  var SCHED = null, REPORT = null;
+  function parseCell(t) {
+    var m = /(\d{1,2}):(\d{2})\s*([ap]m)?/i.exec(t || '');
+    if (!m) return null;
+    var h = +m[1], mi = +m[2];
+    if (m[3]) return { abs: (h % 12) * 60 + mi + (/p/i.test(m[3]) ? 720 : 0) };
+    return { raw: h * 60 + mi };   // bare time: AM/PM worked out from column order
+  }
+  function buildSchedule() {
+    SCHED = {}; REPORT = { matched: [], unmatched: [] };
+    document.querySelectorAll('.route-panel').forEach(function (panel) {
+      var head = (panel.querySelector('.panel-header') || {}).textContent || '';
+      var rm = /^\s*(\d{2,3})(?:\s*\/\s*(\d{2,3}))?/.exec(head);
+      if (!rm) return;
+      var routes = [rm[1]]; if (rm[2]) routes.push(rm[2]);
+      var label = routes.join('/');
+      panel.querySelectorAll('table').forEach(function (table) {
+        var rows = [];
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+          var tds = Array.prototype.slice.call(tr.cells);
+          if (tds.length < 2) return;
+          var cells = tds.slice(1).map(function (td, i) {
+            var oc = td.dataset.origCol; return { i: oc !== undefined ? +oc : i, c: parseCell(td.textContent) };
+          }).sort(function (a, b) { return a.i - b.i; });
+          rows.push({ name: tds[0].textContent.trim(), cells: cells.map(function (x) { return x.c; }) });
+        });
+        if (!rows.length) return;
+        var ncol = Math.max.apply(null, rows.map(function (r) { return r.cells.length; }));
+        // reference time for each trip column = first non-blank cell going down the column
+        var ref = [], prev = null, off = 0;
+        for (var ci = 0; ci < ncol; ci++) {
+          var c = null;
+          for (var ri = 0; ri < rows.length && !c; ri++) c = rows[ri].cells[ci] || null;
+          if (!c) { ref[ci] = null; continue; }
+          if (c.abs !== undefined) { ref[ci] = { v: c.abs, shift: 0 }; prev = c.abs; continue; }
+          if (prev !== null && c.raw + off < prev) off += 720;
+          ref[ci] = { v: c.raw + off, shift: off }; prev = c.raw + off;
+        }
+        rows.forEach(function (row) {
+          if (/M\s*[–-]\s*F/i.test(row.name) && hst().day === 6) return;   // weekday-only stop on a Saturday
+          var times = [];
+          row.cells.forEach(function (c, ci) {
+            if (!c || !ref[ci]) return;
+            var t = c.abs !== undefined ? c.abs : c.raw + ref[ci].shift;
+            if (c.abs === undefined && t < ref[ci].v - 60) t += 720;   // crossed noon part-way down the trip
+            times.push(t);
+          });
+          if (!times.length) return;
+          var m = matchStop(row.name, routes);
+          if (!m) { REPORT.unmatched.push(label + ' | ' + row.name); return; }
+          REPORT.matched.push(label + ' | ' + row.name + ' -> ' + m.e.s[0] + ' (' + m.sc.toFixed(2) + ')');
+          (SCHED[m.e.pos] = SCHED[m.e.pos] || []).push({ label: label, routes: routes, times: times });
+        });
+      });
+    });
+    window.KC_DEBUG = { sched: SCHED, report: REPORT };
+  }
+
+  // ── find the map's markers without touching the app's private variables ──
+  var registry = [], activeRoute = 'all', timer = null;
+  function liveMarkers() {
+    registry = registry.filter(function (m) { return m._map; });   // Leaflet clears _map when a marker is removed
+    return registry.filter(function (m) { return m.getElement && m.getElement(); });
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 80); }
+  function hookLeaflet() {
+    var Lf = window.L;
+    if (!Lf || !Lf.marker) return false;
+    if (Lf.marker._kc) return true;
+    var orig = Lf.marker;
+    var wrapped = function () { var m = orig.apply(this, arguments); registry.push(m); schedule(); return m; };
+    wrapped._kc = true; Lf.marker = wrapped;
+    return true;
+  }
+  if (!hookLeaflet()) {
+    // Leaflet loads lazily the first time the Map tab opens; wrap it the moment it appears
+    var _L;
+    Object.defineProperty(window, 'L', { configurable: true, get: function () { return _L; },
+      set: function (v) { _L = v; hookLeaflet(); } });
+  }
+  if (typeof window.filterMapRoute === 'function') {
+    var origFilter = window.filterMapRoute;
+    window.filterMapRoute = function (route) { activeRoute = route || 'all'; return origFilter.apply(this, arguments); };
+  }
+
+  function entriesFor(pos) {
+    var all = SCHED[pos]; if (!all) return null;
+    var ar = activeRoute;
+    if (ar && ar !== 'all') all = all.filter(function (e) { return e.routes.indexOf(ar) > -1; });
+    return all.length ? all : null;
+  }
+  function nextTimes(entries, nowM, n) {
+    var out = [];
+    entries.forEach(function (e) {
+      var up = e.times.filter(function (t) { return t >= nowM; }).sort(function (a, b) { return a - b; });
+      up.slice(0, n).forEach(function (t) { out.push({ label: e.label, t: t }); });
+    });
+    return out.sort(function (a, b) { return a.t - b.t; });
+  }
+
+  // ── decorate markers ─────────────────────────────────────────────────────
+  var ctrl = null, statusEl = null;
+  function posOf(m) { var ll = m.getLatLng(); return ll.lat + ',' + ll.lng; }
+
+  function popupHtml(m) {
+    var entries = entriesFor(posOf(m)); if (!entries) return '';
+    var now = hst(); if (now.day === 0) return '<div class="kc-next"><div>No bus service on Sundays.</div></div>';
+    var byRoute = {};
+    entries.forEach(function (e) { byRoute[e.label] = (byRoute[e.label] || []).concat(e.times); });
+    var lines = Object.keys(byRoute).map(function (r) {
+      var up = byRoute[r].filter(function (t) { return t >= now.mins; }).sort(function (a, b) { return a - b; });
+      if (!up.length) return '<div>Rte ' + r + ': no more buses today</div>';
+      var more = up.slice(1, 3).map(fmt).join(', ');
+      return '<div><b>Rte ' + r + '</b> next ' + fmt(up[0]) + ' (' + away(up[0] - now.mins) + ')' + (more ? ', then ' + more : '') + '</div>';
+    });
+    return '<div class="kc-next">' + lines.join('') + '<div style="color:#7A7A7A;font-style:italic">Scheduled times, not live GPS</div></div>';
+  }
+  function bindPopup(m) {
+    if (m._kcBound) return; m._kcBound = true;
+    m.on('popupopen', function (e) {
+      // change the popup's own content (Leaflet re-renders from it, so DOM-only edits get wiped)
+      var c = e.popup.getContent(); if (typeof c !== 'string') return;
+      if (m._kcBase === undefined || c.indexOf('kc-next') === -1) m._kcBase = c;
+      var extra = popupHtml(m);
+      e.popup.setContent(extra ? m._kcBase.replace(/<\/div>\s*$/, extra + '</div>') : m._kcBase);
+    });
+  }
+  function addControl() {
+    var ms = liveMarkers(); if (!ms.length || !window.L) return;
+    var map = ms[0]._map;
+    if (ctrl && ctrl._map === map) return;
+    var C = L.Control.extend({ options: { position: 'bottomleft' }, onAdd: function () {
+      var d = L.DomUtil.create('div', 'kc-status'); statusEl = d; L.DomEvent.disableClickPropagation(d); return d;
+    } });
+    ctrl = new C(); ctrl.addTo(map);
+  }
+  function refresh() {
+    if (!SCHED) buildSchedule();
+    var now = hst(), closed = now.day === 0, due = 0;
+    liveMarkers().forEach(function (m) {
+      var el = m.getElement();
+      bindPopup(m);
+      el.classList.remove('kc-due', 'kc-soon', 'kc-done');
+      var entries = entriesFor(posOf(m)); if (!entries) { m.setZIndexOffset(0); return; }
+      var nx = closed ? [] : nextTimes(entries, now.mins, 1);
+      if (!nx.length) { el.classList.add('kc-done'); m.setZIndexOffset(0); return; }
+      var d = nx[0].t - now.mins;
+      if (d <= WINDOW) { el.classList.add('kc-due'); if (d <= SOON) el.classList.add('kc-soon'); due++; m.setZIndexOffset(1000); }
+      else m.setZIndexOffset(0);
+    });
+    addControl();
+    if (statusEl) {
+      statusEl.innerHTML =
+        '<div><span class="kc-dot" style="border-color:#16A34A"></span>bus due within ' + SOON + ' min</div>' +
+        '<div><span class="kc-dot" style="border-color:#F59E0B"></span>bus due within ' + WINDOW + ' min</div>' +
+        '<div style="margin-top:3px;color:#595959">' + (closed ? '<b>No service on Sundays.</b> ' : due + ' stop' + (due === 1 ? '' : 's') + ' highlighted. ') +
+        'Based on the posted schedule, not live GPS. Updated ' + fmt(now.mins) + '.</div>';
+    }
+  }
+
+  // keep the highlight current while the page stays open
+  setInterval(refresh, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script></body></html>
