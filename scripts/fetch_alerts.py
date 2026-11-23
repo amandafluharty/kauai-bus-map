@@ -88,6 +88,11 @@ def main():
                     "color": r.get("color") or "#555555",
                     "textColor": r.get("textColor") or "#FFFFFF",
                 })
+        stops = []
+        for s in assign.get("stops") or []:
+            name = s.get("name") if isinstance(s, dict) else None
+            if name:
+                stops.append(name)
         alerts.append({
             "id": a.get("id"),
             "title": (a.get("name") or a.get("title") or "").strip(),
@@ -96,6 +101,7 @@ def main():
             "end": a.get("end"),
             "global": bool(assign.get("global")),
             "routes": routes,
+            "stops": stops,
         })
 
     out = {
