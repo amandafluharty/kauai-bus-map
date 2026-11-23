@@ -1,0 +1,40 @@
+name: Update bus alerts
+
+# Copies the service alerts from thekauaibus.com/announcements into
+# alerts.json every 30 minutes, so the bus tracker can show them.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bus-alerts
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch alerts
+        run: python scripts/fetch_alerts.py
+
+      - name: Save if changed
+        run: |
+          if git diff --quiet -- alerts.json && git ls-files --error-unmatch alerts.json >/dev/null 2>&1; then
+            echo "No change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add alerts.json
+          git commit -m "Update bus alerts"
+          git push
