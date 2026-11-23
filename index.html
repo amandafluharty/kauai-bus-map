@@ -1319,6 +1319,9 @@
       var s = Date.parse(a.start), e = Date.parse(a.end);
       return (isNaN(s) || s <= now) && (isNaN(e) || e >= now);
     });
+    // share with the map (see MAP ALERTS script below)
+    window.KC_ALERTS = alerts;
+    document.dispatchEvent(new CustomEvent('kc-alerts', { detail: alerts }));
     if (!alerts.length) { box.innerHTML = ''; tagPanels([]); return; }
 
     var affected = [];
@@ -1936,5 +1939,206 @@ var STOPS = [
   // keep the highlight current while the page stays open
   setInterval(refresh, 30000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script>
+
+<!-- ═══ MAP ALERTS: service alerts on the map ═══
+     Uses window.KC_ALERTS (filled from alerts.json by the SERVICE ALERTS script).
+     Adds an alert strip above the map (filtered to the selected route), a ⚠ on
+     affected route buttons, and a red "!" plus a popup warning on stops an alert names. -->
+<style>
+  #map-alerts { flex-shrink: 0; background: #FFF8E1; border-bottom: 1.5px solid #F5C451; font-family: 'Instrument Sans', sans-serif; max-height: 40vh; overflow-y: auto; }
+  #map-alerts:empty { display: none; }
+  .ma-item { border-top: 1px solid #F3DE9C; }
+  .ma-item:first-child { border-top: 0; }
+  .ma-head { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.5rem 1.25rem; background: none; border: 0; cursor: pointer; text-align: left; font-family: inherit; color: var(--ink); }
+  .ma-title { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 700; line-height: 1.3; }
+  .ma-routes { display: inline-flex; flex-wrap: wrap; gap: 0.2rem; margin-left: 0.35rem; vertical-align: middle; }
+  .ma-routes span { font-size: 0.6rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 3px; }
+  .ma-head .chevron { font-size: 0.75rem; margin-left: 0; }
+  .ma-item.open .ma-head .chevron { transform: rotate(180deg); }
+  .ma-body { display: none; padding: 0 1.25rem 0.6rem 2.75rem; font-size: 0.78rem; line-height: 1.5; color: var(--ink); }
+  .ma-item.open .ma-body { display: block; }
+  .ma-show { margin-top: 0.35rem; background: var(--ink); color: white; border: 0; border-radius: 100px; padding: 0.2rem 0.7rem; font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .map-route-btn .ma-warn { font-size: 0.7rem; margin-left: 0.1rem; }
+  .kc-alert-stop::before {
+    content: '!'; position: absolute; top: -9px; right: -9px; z-index: 2;
+    width: 14px; height: 14px; border-radius: 50%; background: #DC2626; color: white;
+    font: 800 10px/14px 'Instrument Sans', sans-serif; text-align: center;
+    border: 1.5px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4); pointer-events: none;
+  }
+  .kc-alert-pop { margin-top: 6px; padding: 5px 7px; border-radius: 6px; background: #FEE2E2; color: #991B1B; font-size: 0.72rem; line-height: 1.35; }
+  .kc-alert-pop b { display: block; }
+  @media (max-width: 600px) {
+    .ma-head { padding: 0.5rem 1rem; }
+    .ma-body { padding: 0 1rem 0.6rem 1rem; }
+  }
+</style>
+<script>
+(function () {
+  var panel = document.getElementById('map-panel');
+  var mapEl = document.getElementById('leaflet-map');
+  if (!panel || !mapEl) return;
+  var strip = document.createElement('div');
+  strip.id = 'map-alerts';
+  strip.setAttribute('aria-live', 'polite');
+  panel.insertBefore(strip, mapEl);
+
+  var activeRoute = 'all', markers = [], openIds = {};
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  // "Kaumualii Hwy - KCC (200)" -> "kaumualii hwy kcc"
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ')
+      .replace(/[ʻ'‘’`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function alerts() { return window.KC_ALERTS || []; }
+  function routeNames(a) { return (a.routes || []).map(function (r) { return r.name; }); }
+  // route-wide outages (worth warning about at every stop on the route)
+  function isOutage(a) { return /suspend|suspension|cancel|no service|not in service|not running/i.test(a.title || ''); }
+
+  // Alerts that name this stop: listed in its stops, or the stop name is in the title
+  function alertsForStop(name) {
+    var n = norm(name);
+    if (n.length < 6) return [];
+    return alerts().filter(function (a) {
+      if ((a.stops || []).some(function (s) { return norm(s) === n; })) return true;
+      return (' ' + norm(a.title) + ' ').indexOf(' ' + n + ' ') !== -1;
+    });
+  }
+  function stopName(m) {
+    var p = m.getPopup && m.getPopup();
+    var c = p && p.getContent();
+    var hit = typeof c === 'string' && c.match(/<h4>([\s\S]*?)<\/h4>/);
+    return hit ? hit[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&') : '';
+  }
+
+  // ── strip above the map ──
+  function renderStrip() {
+    var list = alerts().filter(function (a) {
+      return activeRoute === 'all' || a.global || routeNames(a).indexOf(activeRoute) !== -1;
+    });
+    strip.innerHTML = list.map(function (a) {
+      var badges = (a.routes || []).map(function (r) {
+        return '<span style="background:' + esc(r.color) + ';color:' + esc(r.textColor) + '">' + esc(r.name) + '</span>';
+      }).join('');
+      var hasStop = markers.some(function (m) { return m._map && alertsForStop(stopName(m)).indexOf(a) !== -1; });
+      return '<div class="ma-item' + (openIds[a.id] ? ' open' : '') + '" data-id="' + esc(a.id) + '">' +
+        '<button type="button" class="ma-head" aria-expanded="' + !!openIds[a.id] + '">' +
+          '<span>⚠️</span><span class="ma-title">' + esc(a.title) +
+          (badges ? '<span class="ma-routes">' + badges + '</span>' : '') + '</span>' +
+          '<span class="chevron">▼</span></button>' +
+        '<div class="ma-body">' + esc(a.text) +
+          (hasStop ? '<div><button type="button" class="ma-show">Show stop on map</button></div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+  strip.addEventListener('click', function (e) {
+    var item = e.target.closest('.ma-item'); if (!item) return;
+    var id = item.getAttribute('data-id');
+    if (e.target.closest('.ma-show')) {
+      var a = alerts().filter(function (x) { return String(x.id) === id; })[0];
+      var m = markers.filter(function (mk) { return mk._map && alertsForStop(stopName(mk)).indexOf(a) !== -1; })[0];
+      if (m) {
+        // fold the strip so the popup has room, then center below the popup
+        openIds = {}; renderStrip();
+        var map = m._map;
+        map.invalidateSize();
+        map.setView(m.getLatLng(), 16, { animate: false });
+        map.panBy([0, -Math.round(map.getSize().y * 0.3)], { animate: false });
+        m.openPopup();
+      }
+      return;
+    }
+    if (!e.target.closest('.ma-head')) return;
+    openIds[id] = !openIds[id];
+    item.classList.toggle('open', openIds[id]);
+    item.querySelector('.ma-head').setAttribute('aria-expanded', openIds[id]);
+  });
+
+  // ── ⚠ on route buttons ──
+  function markButtons() {
+    var hit = {};
+    alerts().forEach(function (a) { routeNames(a).forEach(function (r) { hit[r] = true; }); });
+    document.querySelectorAll('.map-route-btn[data-route]').forEach(function (b) {
+      var w = b.querySelector('.ma-warn');
+      var on = !!hit[b.getAttribute('data-route')];
+      if (on && !w) { w = document.createElement('span'); w.className = 'ma-warn'; w.textContent = '⚠'; w.title = 'Service alert'; b.appendChild(w); }
+      if (!on && w) w.remove();
+    });
+  }
+
+  // ── stop markers ──
+  function markStop(m) {
+    var el = m.getElement && m.getElement(); if (!el) return;
+    el.classList.toggle('kc-alert-stop', alertsForStop(stopName(m)).length > 0);
+  }
+  function markStops() {
+    markers = markers.filter(function (m) { return m._map; });
+    markers.forEach(markStop);
+  }
+  function watchMarker(m) {
+    markers.push(m);
+    // the app binds the popup right after adding the marker, so check on the next tick
+    m.on('add', function () { setTimeout(function () { markStop(m); renderStrip(); }, 0); });
+    setTimeout(function () { markStop(m); }, 0);
+    m.on('popupopen', function (e) {
+      // run after the next-departure script has rewritten the popup
+      setTimeout(function () {
+        var root = e.popup.getElement && e.popup.getElement();
+        var box = root && root.querySelector('.bus-popup');
+        if (!box || box.querySelector('.kc-alert-pop')) return;
+        // alerts naming this stop, plus route suspensions for routes that serve it
+        var served = [].map.call(box.querySelectorAll('.rbadge'), function (b) { return b.textContent.trim(); });
+        var list = alertsForStop(stopName(m));
+        alerts().forEach(function (a) {
+          if (list.indexOf(a) === -1 && isOutage(a) &&
+              routeNames(a).some(function (r) { return served.indexOf(r) !== -1; })) list.push(a);
+        });
+        if (!list.length) return;
+        var div = document.createElement('div');
+        div.className = 'kc-alert-pop';
+        div.innerHTML = list.map(function (a) { return '<b>⚠ ' + esc(a.title) + '</b>'; }).join('') +
+          '<span>See the alert above the map.</span>';
+        box.appendChild(div);
+        // the popup grew after Leaflet positioned it: scroll the map so its top shows
+        var top = root.getBoundingClientRect().top - mapEl.getBoundingClientRect().top;
+        if (top < 10 && m._map) m._map.panBy([0, top - 10]);
+      }, 0);
+    });
+  }
+  function hookLeaflet(Lf) {
+    if (!Lf || !Lf.Marker || Lf.Marker._kcAlerts) return;
+    Lf.Marker._kcAlerts = true;
+    Lf.Marker.addInitHook(function () { watchMarker(this); });
+  }
+  // Leaflet loads the first time the map opens; chain onto the existing window.L watcher
+  if (window.L) hookLeaflet(window.L);
+  else {
+    var desc = Object.getOwnPropertyDescriptor(window, 'L');
+    var _L;
+    Object.defineProperty(window, 'L', { configurable: true,
+      get: function () { return desc && desc.get ? desc.get() : _L; },
+      set: function (v) { if (desc && desc.set) desc.set(v); else _L = v; hookLeaflet(v); } });
+  }
+
+  // follow the route buttons
+  if (typeof window.filterMapRoute === 'function') {
+    var orig = window.filterMapRoute;
+    window.filterMapRoute = function (route) {
+      activeRoute = route || 'all';
+      var out = orig.apply(this, arguments);
+      markButtons(); renderStrip();
+      return out;
+    };
+  }
+
+  function update() { markButtons(); markStops(); renderStrip(); }
+  document.addEventListener('kc-alerts', update);
+  update();
 })();
 </script></body></html>
