@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=88bf1657-b723-45fc-bdea-05b10919e6fb
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Kauaʻi Bus — Routes & Schedules</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -310,6 +313,36 @@
   @media (max-width: 600px) {
     #map-panel { top: 59px; }
   }
+
+  /* ── SERVICE ALERTS (from thekauaibus.com, via alerts.json) ── */
+  #service-alerts { margin-bottom: 1.75rem; }
+  #service-alerts:empty { display: none; }
+  .alert-card {
+    background: #FFF8E1; border: 1.5px solid #F5C451; border-left: 5px solid #E0A100;
+    border-radius: 12px; margin-bottom: 0.75rem; overflow: hidden;
+  }
+  .alert-head {
+    display: flex; align-items: flex-start; gap: 0.6rem; width: 100%;
+    padding: 0.85rem 1.1rem; background: none; border: 0; cursor: pointer; text-align: left;
+    font-family: 'Instrument Sans', sans-serif; color: var(--ink);
+  }
+  .alert-icon { font-size: 1rem; line-height: 1.3; flex-shrink: 0; }
+  .alert-main { flex: 1; min-width: 0; }
+  .alert-title { font-size: 0.95rem; font-weight: 700; line-height: 1.3; }
+  .alert-routes { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  .alert-route { font-size: 0.68rem; font-weight: 700; padding: 0.12rem 0.5rem; border-radius: 4px; }
+  .alert-head .chevron { margin-top: 0.15rem; }
+  .alert-card.open .alert-head .chevron { transform: rotate(180deg); }
+  .alert-body { display: none; padding: 0 1.1rem 0.9rem 2.7rem; font-size: 0.84rem; line-height: 1.55; color: var(--ink); }
+  .alert-card.open .alert-body { display: block; }
+  .alert-dates { margin-top: 0.45rem; font-size: 0.74rem; font-weight: 600; color: var(--subtle); }
+  .alert-source { font-size: 0.72rem; color: var(--subtle); margin-top: -0.25rem; }
+  .alert-source a { color: var(--ocean); font-weight: 600; text-decoration: none; }
+  .tag-alert { background: #FEE2E2; color: #B91C1C; }
+  @media (max-width: 600px) {
+    .alert-head { padding: 0.75rem 0.9rem; }
+    .alert-body { padding: 0 0.9rem 0.8rem 0.9rem; }
+  }
 </style>
 </head>
 <body>
@@ -350,6 +383,7 @@
 </div>
 
 <div class="main">
+<div id="service-alerts" aria-live="polite"></div>
 <div class="section-label">Routes — tap to expand schedule</div>
 
 <!-- ═══════════════════════════════════════════
@@ -1241,6 +1275,93 @@
   } else {
     init();
   }
+</script>
+<script>
+// ── SERVICE ALERTS ───────────────────────────────────────────────────────────
+// alerts.json is refreshed every 30 min by a GitHub Action that copies the
+// alerts from thekauaibus.com/announcements (that site blocks direct reads).
+(function () {
+  var box = document.getElementById('service-alerts');
+  if (!box) return;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  // Show dates in Hawaiʻi time, like the bus site (9/1/26 - 12/31/26)
+  function hiDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('en-US', { timeZone: 'Pacific/Honolulu', month: 'numeric', day: 'numeric', year: '2-digit' });
+  }
+
+  function tagPanels(routeNames) {
+    document.querySelectorAll('.tag-alert').forEach(function (t) { t.remove(); });
+    document.querySelectorAll('.route-panel').forEach(function (panel) {
+      var num = panel.querySelector('.badge-num');
+      var meta = panel.querySelector('.panel-meta');
+      if (!num || !meta) return;
+      var n = num.textContent.trim();
+      var hit = routeNames.some(function (r) { return r === n || r.split('/').indexOf(n) !== -1 || n.split('/').indexOf(r) !== -1; });
+      if (hit) {
+        var t = document.createElement('span');
+        t.className = 'tag tag-alert';
+        t.textContent = '⚠ Service alert';
+        meta.insertBefore(t, meta.firstChild);
+      }
+    });
+  }
+
+  function render(data) {
+    var now = Date.now();
+    var alerts = (data && data.alerts || []).filter(function (a) {
+      var s = Date.parse(a.start), e = Date.parse(a.end);
+      return (isNaN(s) || s <= now) && (isNaN(e) || e >= now);
+    });
+    if (!alerts.length) { box.innerHTML = ''; tagPanels([]); return; }
+
+    var affected = [];
+    var html = '<div class="section-label">Service alerts</div>';
+    alerts.forEach(function (a, i) {
+      var badges = (a.routes || []).map(function (r) {
+        if (affected.indexOf(r.name) === -1) affected.push(r.name);
+        return '<span class="alert-route" style="background:' + esc(r.color) + ';color:' + esc(r.textColor) + '">' + esc(r.name) + '</span>';
+      }).join('');
+      if (a.global) badges = '<span class="alert-route" style="background:#131313;color:#fff">All routes</span>' + badges;
+      var dates = hiDate(a.start) + (a.end ? ' – ' + hiDate(a.end) : '');
+      html += '<div class="alert-card' + (i === 0 ? ' open' : '') + '">' +
+        '<button type="button" class="alert-head" aria-expanded="' + (i === 0) + '">' +
+          '<span class="alert-icon">⚠️</span>' +
+          '<span class="alert-main"><span class="alert-title">' + esc(a.title) + '</span>' +
+          (badges ? '<span class="alert-routes">' + badges + '</span>' : '') + '</span>' +
+          '<span class="chevron">▼</span>' +
+        '</button>' +
+        '<div class="alert-body">' + esc(a.text) + (dates.trim() ? '<div class="alert-dates">' + dates + '</div>' : '') + '</div>' +
+      '</div>';
+    });
+    html += '<div class="alert-source">From <a href="https://www.thekauaibus.com/announcements" target="_blank" rel="noopener">The Kauaʻi Bus announcements ↗</a></div>';
+    box.innerHTML = html;
+    tagPanels(affected);
+  }
+
+  box.addEventListener('click', function (e) {
+    var head = e.target.closest('.alert-head');
+    if (!head) return;
+    var card = head.parentNode;
+    card.classList.toggle('open');
+    head.setAttribute('aria-expanded', card.classList.contains('open'));
+  });
+
+  function load() {
+    fetch('alerts.json?t=' + Math.floor(Date.now() / 300000), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) render(d); })
+      .catch(function () { /* no alerts file yet: show nothing */ });
+  }
+  load();
+  setInterval(load, 15 * 60 * 1000);
+})();
 </script>
 <script>
 // ── MAP DATA ─────────────────────────────────────────────────────────────────
