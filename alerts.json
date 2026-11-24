@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-23T21:13:22Z",
+  "updated": "2026-11-24T05:27:53Z",
   "source": "https://www.thekauaibus.com/announcements",
   "alerts": [
     {
@@ -10,13 +10,38 @@
       "end": "2027-01-01T09:59:59+00:00",
       "global": false,
       "routes": [
-        {"name": "100", "color": "#2A12FF", "textColor": "#FFFFFF"},
-        {"name": "200", "color": "#19F7FF", "textColor": "#000000"},
-        {"name": "400", "color": "#26A640", "textColor": "#FFFFFF"},
-        {"name": "500", "color": "#69FF1F", "textColor": "#030000"},
-        {"name": "800", "color": "#FF6C17", "textColor": "#FFFFFF"},
-        {"name": "850", "color": "#FF6C17", "textColor": "#FFFFFF"}
-      ]
+        {
+          "name": "100",
+          "color": "#2A12FF",
+          "textColor": "#FFFFFF"
+        },
+        {
+          "name": "200",
+          "color": "#19F7FF",
+          "textColor": "#000000"
+        },
+        {
+          "name": "400",
+          "color": "#26A640",
+          "textColor": "#FFFFFF"
+        },
+        {
+          "name": "500",
+          "color": "#69FF1F",
+          "textColor": "#030000"
+        },
+        {
+          "name": "800",
+          "color": "#FF6C17",
+          "textColor": "#FFFFFF"
+        },
+        {
+          "name": "850",
+          "color": "#FF6C17",
+          "textColor": "#FFFFFF"
+        }
+      ],
+      "stops": []
     },
     {
       "id": 76613,
@@ -26,9 +51,18 @@
       "end": "2027-01-02T09:59:59+00:00",
       "global": false,
       "routes": [
-        {"name": "900", "color": "#561F94", "textColor": "#FFFFFF"},
-        {"name": "950", "color": "#561F94", "textColor": "#FFFFFF"}
-      ]
+        {
+          "name": "900",
+          "color": "#561F94",
+          "textColor": "#FFFFFF"
+        },
+        {
+          "name": "950",
+          "color": "#561F94",
+          "textColor": "#FFFFFF"
+        }
+      ],
+      "stops": []
     }
   ]
 }
